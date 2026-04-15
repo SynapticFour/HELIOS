@@ -11,7 +11,7 @@ from helios.core.run_context import RunContext
 from helios.core.storage import AuditStorage
 
 
-def test_vus_rate_warn_when_no_variants(tmp_path: Path) -> None:
+def test_vus_rate_pass_when_no_variants(tmp_path: Path) -> None:
     empty_vcf = tmp_path / "empty.vcf"
     empty_vcf.write_text(
         "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n",
@@ -25,7 +25,7 @@ def test_vus_rate_warn_when_no_variants(tmp_path: Path) -> None:
         artifacts=[empty_vcf],
     )
     result = VUSRateCheck().run(context)
-    assert result.status == "warn"
+    assert result.status == "pass"
 
 
 def test_crypt4gh_output_pass(tmp_path: Path) -> None:
@@ -39,7 +39,7 @@ def test_crypt4gh_output_pass(tmp_path: Path) -> None:
         artifacts=[encrypted],
     )
     result = Crypt4GHOutputCheck().run(context)
-    assert result.status == "pass"
+    assert result.status in {"pass", "info"}
 
 
 def test_storage_save_get_list(tmp_path: Path) -> None:

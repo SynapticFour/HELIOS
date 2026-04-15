@@ -32,9 +32,10 @@ class CheckResult(BaseModel):
     """Result emitted by a compliance check."""
 
     check_id: str
-    status: Literal["pass", "warn", "fail"]
+    status: Literal["pass", "warn", "fail", "skip", "info"]
     message: str
-    evidence: dict[str, str] = Field(default_factory=dict)
+    # Any is used for structured evidence payloads (lists/histograms/objects).
+    evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReferenceGenomeInfo(BaseModel):
