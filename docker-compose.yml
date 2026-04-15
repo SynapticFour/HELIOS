@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  helios-dashboard:
+    build: .
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./helios-data:/root/.helios
+    command: ["helios", "serve", "--host", "0.0.0.0", "--port", "8765"]

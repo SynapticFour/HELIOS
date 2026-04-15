@@ -1,0 +1,15 @@
+[helios]
+pipeline_executor = "nextflow"
+signing_key = "~/.helios/keys/helios.key"
+audit_db = "~/.helios/helios.db"
+log_level = "INFO"
+
+[helios.checks]
+enabled = ["reference_genome", "container_pinning", "mane_transcripts", "vus_rate"]
+reference_genome_required = "GRCh38"
+
+[helios.export]
+default_format = "json"
+output_dir = "./helios-reports"
+include_rocrate = true
+

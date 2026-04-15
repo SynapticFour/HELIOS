@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.10
+    hooks:
+      - id: ruff
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: .venv/bin/mypy src/helios/
+        language: system
+        pass_filenames: false
+      - id: pytest
+        name: pytest
+        entry: .venv/bin/pytest tests/ -q
+        language: system
+        pass_filenames: false
