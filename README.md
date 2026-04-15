@@ -13,7 +13,7 @@ Genomics Pipeline Audit & Validation Framework for signed, reproducible complian
 ![PyPI](https://img.shields.io/pypi/v/helios-audit)
 ![Python](https://img.shields.io/pypi/pyversions/helios-audit)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
-![CI](https://img.shields.io/github/actions/workflow/status/example/helios/ci.yml?branch=main)
+![CI](https://img.shields.io/github/actions/workflow/status/SynapticFour/HELIOS/ci.yml?branch=main)
 
 ## Why HELIOS?
 
@@ -53,6 +53,7 @@ See [`docs/index.md`](docs/index.md).
   - [`.github/workflows/secret-scan.yml`](.github/workflows/secret-scan.yml)
   - [`.github/workflows/dependency-review.yml`](.github/workflows/dependency-review.yml)
   - [`.github/workflows/dependabot-smoke.yml`](.github/workflows/dependabot-smoke.yml)
+- **Dependency Review** requires the GitHub **Dependency graph** for this repository (repository owner: **Settings → Security → Code security and analysis → Dependency graph**). Without it, that workflow reports that dependency review is not supported.
 - Repo governance:
   - [`SECURITY.md`](SECURITY.md)
   - [`CONTRIBUTING.md`](CONTRIBUTING.md)
