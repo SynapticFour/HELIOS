@@ -45,6 +45,20 @@ helios report --run-id <run-id> --format json
 
 See [`docs/index.md`](docs/index.md).
 
+## CI, Security, and Governance
+
+- Primary quality pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- Security/compliance automation:
+  - [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)
+  - [`.github/workflows/secret-scan.yml`](.github/workflows/secret-scan.yml)
+  - [`.github/workflows/dependency-review.yml`](.github/workflows/dependency-review.yml)
+  - [`.github/workflows/dependabot-smoke.yml`](.github/workflows/dependabot-smoke.yml)
+- Repo governance:
+  - [`SECURITY.md`](SECURITY.md)
+  - [`CONTRIBUTING.md`](CONTRIBUTING.md)
+  - [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+  - [`.github/pull_request_template.md`](.github/pull_request_template.md)
+
 ## Compliance Coverage
 
 | Standard | Coverage |
@@ -76,4 +90,9 @@ Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 ## License
 
 Apache 2.0. See [`LICENSE`](LICENSE).
+
+## Important Notice
+
+HELIOS provides technical quality and compliance evidence support. It is not, by
+itself, a certification decision, legal determination, or regulatory approval.
 

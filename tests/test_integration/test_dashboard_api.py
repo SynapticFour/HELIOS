@@ -62,4 +62,3 @@ def test_dashboard_api_roundtrip(tmp_path: Path) -> None:
         ai_act = client.get(f"/api/v1/reports/{record.run_id}/ai-act")
         assert ai_act.status_code == 200
         assert "ai_act_art11_fragment" in ai_act.json()
-

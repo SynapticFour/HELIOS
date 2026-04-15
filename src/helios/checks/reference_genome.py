@@ -90,8 +90,7 @@ class ReferenceGenomeCheck(BaseCheck):
                 check_id=self.check_id,
                 status="warn",
                 message=(
-                    "Reference naming is compatible with GRCh38/hg38 "
-                    "but lacks UR/M5 provenance."
+                    "Reference naming is compatible with GRCh38/hg38 but lacks UR/M5 provenance."
                 ),
                 evidence=evidence,
             )
@@ -120,4 +119,3 @@ class ReferenceGenomeCheck(BaseCheck):
 
         with pysam.AlignmentFile(str(path), "r") as alignment:
             return alignment.header.to_dict()
-

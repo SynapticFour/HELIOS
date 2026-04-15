@@ -97,4 +97,3 @@ class AuditRecord(BaseModel):
             payload=self.canonical_json().encode("utf-8"),
             signature=signature,
         )
-

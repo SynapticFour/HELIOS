@@ -89,7 +89,7 @@ class NextflowRunParser:
             process_records.append(
                 ProcessRecord(
                     process_name=process_name,
-                    container=row.get("container", "").strip().strip("\""),
+                    container=row.get("container", "").strip().strip('"'),
                     status=row.get("status", "UNKNOWN").strip(),
                     duration_ms=self._parse_duration_ms(row.get("duration", "0")),
                     input_files=input_files,
@@ -239,14 +239,18 @@ def build_context(work_dir: Path, output_dir: Path, pipeline_name: str) -> RunCo
     """Build a run context from parsed Nextflow artifacts."""
     parser = NextflowRunParser(work_dir=work_dir, output_dir=output_dir)
     context = parser.build_run_context()
-    return context if context.pipeline_name != "unknown-pipeline" else context.__class__(
-        pipeline_name=pipeline_name,
-        executor=context.executor,
-        work_dir=context.work_dir,
-        output_dir=context.output_dir,
-        parameters=context.parameters,
-        artifacts=context.artifacts,
-        metadata=context.metadata,
+    return (
+        context
+        if context.pipeline_name != "unknown-pipeline"
+        else context.__class__(
+            pipeline_name=pipeline_name,
+            executor=context.executor,
+            work_dir=context.work_dir,
+            output_dir=context.output_dir,
+            parameters=context.parameters,
+            artifacts=context.artifacts,
+            metadata=context.metadata,
+        )
     )
 
 
@@ -260,4 +264,3 @@ def _split_container(ref: str) -> tuple[str, str, str | None]:
     else:
         name, tag = ref, ""
     return name, tag, digest
-

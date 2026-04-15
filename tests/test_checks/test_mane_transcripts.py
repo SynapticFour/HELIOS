@@ -121,4 +121,3 @@ def test_mane_transcripts_pass(vcf_path: Path, tmp_path: Path) -> None:
     )
     result = check.run(context)
     assert result.status == "pass"
-

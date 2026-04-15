@@ -6,7 +6,7 @@ Security fixes are provided for the latest release line (`0.1.x`).
 
 ## Reporting a Vulnerability
 
-- Email: `security@example.org` (placeholder; replace for production use)
+- Email: `contact@synapticfour.com`
 - Include:
   - affected version
   - reproduction steps

@@ -106,4 +106,3 @@ def load_config(path: str | None = None) -> HeliosSettings:
     raw = loads(config_path.read_text(encoding="utf-8"))
     data = raw.get("helios", raw)
     return HeliosSettings(**data)
-

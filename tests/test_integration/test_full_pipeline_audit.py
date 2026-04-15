@@ -51,12 +51,12 @@ def test_full_pipeline_audit(tmp_path: Path, monkeypatch) -> None:
     config_path.write_text(
         (
             "[helios]\n"
-            f"signing_key = \"{signing_key}\"\n"
-            f"audit_db = \"{db_path}\"\n"
+            f'signing_key = "{signing_key}"\n'
+            f'audit_db = "{db_path}"\n'
             "\n[helios.checks]\n"
-            "enabled = [\"reference_genome\", \"container_pinning\", \"vus_rate\"]\n"
+            'enabled = ["reference_genome", "container_pinning", "vus_rate"]\n'
             "\n[helios.export]\n"
-            f"output_dir = \"{reports_dir}\"\n"
+            f'output_dir = "{reports_dir}"\n'
         ),
         encoding="utf-8",
     )
@@ -98,4 +98,3 @@ def test_full_pipeline_audit(tmp_path: Path, monkeypatch) -> None:
     payload = json.loads(json_report.read_text(encoding="utf-8"))
     assert payload["run_id"] == str(record.run_id)
     assert "checks" in payload and payload["checks"]
-

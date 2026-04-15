@@ -73,4 +73,3 @@ def report_ai_act(run_id: UUID, storage: AuditStorage = STORAGE_DEP) -> JSONResp
         raise HTTPException(status_code=404, detail="Run not found")
     payload = {"ai_act_art11_fragment": _build_ai_act_art11_fragment(record)}
     return JSONResponse(content=json.loads(json.dumps(payload, default=str)))
-

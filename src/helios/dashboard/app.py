@@ -62,4 +62,3 @@ def create_app(settings: HeliosSettings | None = None) -> FastAPI:
         return JSONResponse({"message": "HELIOS dashboard served at /static/index.html"})
 
     return app
-

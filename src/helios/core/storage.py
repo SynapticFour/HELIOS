@@ -80,4 +80,3 @@ class AuditStorage:
             session.delete(row)
             session.commit()
             return True
-

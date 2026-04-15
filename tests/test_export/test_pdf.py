@@ -19,4 +19,3 @@ def test_pdf_generation(tmp_path: Path) -> None:
     assert output.exists()
     assert output.stat().st_size > 1024
     assert output.read_bytes().startswith(b"%PDF")
-

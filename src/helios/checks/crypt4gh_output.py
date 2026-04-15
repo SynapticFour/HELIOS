@@ -77,8 +77,7 @@ class Crypt4GHOutputCheck(BaseCheck):
     def _is_genomic_output(self, path: Path) -> bool:
         text = str(path).lower()
         return any(
-            text.endswith(suffix) or text.endswith(f"{suffix}.c4gh")
-            for suffix in GENOMIC_SUFFIXES
+            text.endswith(suffix) or text.endswith(f"{suffix}.c4gh") for suffix in GENOMIC_SUFFIXES
         )
 
     def _is_crypt4gh_file(self, path: Path) -> bool:
@@ -87,4 +86,3 @@ class Crypt4GHOutputCheck(BaseCheck):
         with path.open("rb") as handle:
             header = handle.read(12)
         return header == CRYPT4GH_MAGIC
-

@@ -48,10 +48,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/example/helios"
-Documentation = "https://github.com/example/helios/tree/main/docs"
-Repository = "https://github.com/example/helios"
-Issues = "https://github.com/example/helios/issues"
+Homepage = "https://github.com/SynapticFour/HELIOS"
+Documentation = "https://github.com/SynapticFour/HELIOS/tree/main/docs"
+Repository = "https://github.com/SynapticFour/HELIOS"
+Issues = "https://github.com/SynapticFour/HELIOS/issues"
 
 [project.scripts]
 helios = "helios.cli:app"

@@ -112,4 +112,3 @@ def _status_for_record(record: AuditRecord) -> str:
     if any(check.status == "warn" for check in record.checks):
         return "warn"
     return "pass"
-

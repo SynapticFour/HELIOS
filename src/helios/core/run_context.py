@@ -18,4 +18,3 @@ class RunContext:
     parameters: dict[str, Any] = field(default_factory=dict)  # Any for arbitrary CLI/config values.
     artifacts: list[Path] = field(default_factory=list)
     metadata: dict[str, str] = field(default_factory=dict)
-

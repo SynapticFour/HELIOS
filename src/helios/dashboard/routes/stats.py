@@ -37,10 +37,7 @@ def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
         )
     scores = [CheckRegistry().compute_score(record.checks).score for record in records]
     failing = Counter(
-        check.check_id
-        for record in records
-        for check in record.checks
-        if check.status == "fail"
+        check.check_id for record in records for check in record.checks if check.status == "fail"
     ).most_common(5)
     grch38_hits = sum(1 for record in records if _record_has_grch38(record))
     mane_checks = [
@@ -57,8 +54,7 @@ def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
         total_runs=len(records),
         avg_score=round(sum(scores) / len(scores), 2),
         failing_checks_top5=[
-            FailingCheckCount(check_id=check_id, count=count)
-            for check_id, count in failing
+            FailingCheckCount(check_id=check_id, count=count) for check_id, count in failing
         ],
         grch38_adoption_rate=round((grch38_hits / len(records)) * 100, 2),
         mane_adoption_rate=round((mane_hits / max(len(mane_checks), 1)) * 100, 2),
@@ -85,4 +81,3 @@ def trends(storage: AuditStorage = STORAGE_DEP) -> dict[str, object]:
 def _record_has_grch38(record: object) -> bool:
     checks = getattr(record, "checks", [])
     return any("grch38" in str(getattr(check, "evidence", "")).lower() for check in checks)
-

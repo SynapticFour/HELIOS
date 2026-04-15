@@ -89,4 +89,3 @@ def _generate_audit(session: Any, error: Exception | None) -> None:
     )
     storage = AuditStorage()
     storage.save_record(record)
-

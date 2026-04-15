@@ -13,9 +13,10 @@ pip install -e ".[dev]"
 ## Quality Gates
 
 ```bash
-ruff check .
-mypy src
-pytest
+ruff check src/ tests/
+ruff format --check src/ tests/
+mypy src/helios/
+pytest tests/ -v --tb=short --cov=helios --cov-report=term-missing
 ```
 
 ## Pull Requests

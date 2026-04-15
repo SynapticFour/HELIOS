@@ -63,9 +63,7 @@ class VUSRateCheck(BaseCheck):
     def _classify_variant(self, line: str) -> str | None:
         info = line.split("\t", maxsplit=8)[7] if "\t" in line else ""
         fields = {
-            item.split("=", 1)[0]: item.split("=", 1)[1]
-            for item in info.split(";")
-            if "=" in item
+            item.split("=", 1)[0]: item.split("=", 1)[1] for item in info.split(";") if "=" in item
         }
         clnsig = fields.get("CLNSIG", "").lower()
         acmg_class = fields.get("ACMG_CLASS", "").upper()
@@ -79,4 +77,3 @@ class VUSRateCheck(BaseCheck):
         if clnsig:
             return "OTHER"
         return None
-

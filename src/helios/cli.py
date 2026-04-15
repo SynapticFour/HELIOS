@@ -46,9 +46,7 @@ def _build_context_from_record(record: AuditRecord) -> RunContext:
     """Reconstruct a run context from a persisted audit record."""
 
     artifacts = [
-        Path(file_hash.path)
-        for file_hash in record.output_files
-        if Path(file_hash.path).exists()
+        Path(file_hash.path) for file_hash in record.output_files if Path(file_hash.path).exists()
     ]
     return RunContext(
         pipeline_name=record.pipeline_name,
@@ -364,8 +362,7 @@ def _resolve_enabled_checks(registry: CheckRegistry, configured: list[str]) -> l
     """Resolve configured check names or IDs to registered check identifiers."""
     registered = registry.get_registered_checks()
     by_name = {
-        cls.__name__.lower().replace("_", ""): check_id
-        for check_id, cls in registered.items()
+        cls.__name__.lower().replace("_", ""): check_id for check_id, cls in registered.items()
     }
     resolved: list[str] = []
     for entry in configured:
@@ -379,4 +376,3 @@ def _resolve_enabled_checks(registry: CheckRegistry, configured: list[str]) -> l
         if matched:
             resolved.append(matched)
     return resolved or list(registered.keys())
-

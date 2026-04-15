@@ -107,4 +107,3 @@ class CheckRegistry:
 
 
 __all__ = ["CheckRegistry", "ComplianceScore"]
-

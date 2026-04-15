@@ -22,4 +22,3 @@ def sha256_file(
             if progress_callback is not None:
                 progress_callback(bytes_processed)
     return digest.hexdigest()
-

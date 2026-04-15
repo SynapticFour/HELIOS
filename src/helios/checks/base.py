@@ -21,4 +21,3 @@ class BaseCheck(ABC):
     @abstractmethod
     def run(self, context: RunContext) -> CheckResult:
         """Execute check against the run context."""
-

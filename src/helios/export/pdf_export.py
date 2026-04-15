@@ -31,4 +31,3 @@ def export_pdf(record: AuditRecord, output_path: Path) -> Path:
     )
     HTML(string=html).write_pdf(str(output_path))
     return output_path
-
