@@ -1,0 +1,4 @@
+task_id	process	container	status
+1	ALIGN	docker.io/biocontainers/bwa:0.7.17@sha256:abc123	COMPLETED
+2	CALL	docker.io/biocontainers/freebayes:1.3.6	COMPLETED
+

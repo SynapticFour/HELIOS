@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "helios-audit"
+version = "0.1.0"
+description = "Genomics Pipeline Audit & Validation Framework"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [
+  { name = "HELIOS Contributors" }
+]
+keywords = ["genomics", "audit", "nextflow", "snakemake", "compliance", "iso15189"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+  "typer[all]>=0.12",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "sqlmodel>=0.0.19",
+  "cryptography>=42.0",
+  "rich>=13.7",
+  "httpx>=0.27",
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "weasyprint>=62.0",
+  "jinja2>=3.1",
+  "pysam>=0.22",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.4",
+  "mypy>=1.10",
+  "hypothesis>=6.100",
+]
+
+[project.urls]
+Homepage = "https://github.com/example/helios"
+Documentation = "https://github.com/example/helios/tree/main/docs"
+Repository = "https://github.com/example/helios"
+Issues = "https://github.com/example/helios/issues"
+
+[project.scripts]
+helios = "helios.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/helios"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=helios.core --cov=helios.checks --cov-report=term-missing --cov-fail-under=80"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+plugins = []
+
