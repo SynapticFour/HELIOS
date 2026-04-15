@@ -2,51 +2,40 @@
 
 from __future__ import annotations
 
+import subprocess
+import webbrowser
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 import typer
+import uvicorn
 from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
-from helios.checks.base import BaseCheck
-from helios.checks.container_pinning import ContainerPinningCheck
-from helios.checks.crypt4gh_output import Crypt4GHOutputCheck
-from helios.checks.mane_transcripts import ManeTranscriptCheck
-from helios.checks.reference_genome import ReferenceGenomeCheck
-from helios.checks.vus_rate import VUSRateCheck
-from helios.config import load_config
+from helios.checks import CheckRegistry
+from helios.config import HeliosSettings, load_config
 from helios.core.audit_record import AuditRecord, FileHash
 from helios.core.hasher import sha256_file
 from helios.core.run_context import RunContext
 from helios.core.signer import generate_keypair, sign_record
 from helios.core.storage import AuditStorage
+from helios.dashboard.app import create_app
 from helios.export.json_export import export_json
 from helios.export.pdf_export import export_pdf
 from helios.export.rocrate import export_rocrate
-from helios.integrations.nextflow import build_context as nextflow_context
-from helios.integrations.nextflow import extract_containers, parse_trace
-from helios.integrations.snakemake import build_context as snakemake_context
+from helios.integrations.nextflow import NextflowRunParser
+from helios.integrations.snakemake import SnakemakeRunParser
+from helios.integrations.snakemake_wrapper import run_wrapped_snakemake
 
 app = typer.Typer(help="HELIOS genomics pipeline audit and validation CLI.")
 key_app = typer.Typer(help="Manage HELIOS signing keys.")
 app.add_typer(key_app, name="key")
 console = Console()
-PIPELINE_OPTION = typer.Option(..., "--pipeline")
-WORK_DIR_OPTION = typer.Option(..., "--work-dir")
-OUTPUT_DIR_OPTION = typer.Option(..., "--output-dir")
-
-
-def _collect_checks() -> list[BaseCheck]:
-    return [
-        ReferenceGenomeCheck(),
-        ContainerPinningCheck(),
-        ManeTranscriptCheck(),
-        VUSRateCheck(),
-        Crypt4GHOutputCheck(),
-    ]
 
 
 def _build_context_from_record(record: AuditRecord) -> RunContext:
@@ -79,63 +68,105 @@ def init(path: Path = Path("helios.toml")) -> None:
 
 @app.command()
 def run(
-    pipeline: Literal["nextflow", "snakemake"] = PIPELINE_OPTION,
-    work_dir: Path = WORK_DIR_OPTION,
-    output_dir: Path = OUTPUT_DIR_OPTION,
+    pipeline: Annotated[str, typer.Option("--pipeline", "-p")],
+    work_dir: Annotated[Path, typer.Option("--work-dir", "-w")] = Path("."),
+    output_dir: Annotated[Path, typer.Option("--output-dir", "-o")] = Path("./results"),
+    config: Annotated[Path | None, typer.Option("--config", "-c")] = None,
+    no_sign: Annotated[bool, typer.Option("--no-sign")] = False,
+    export_format: Annotated[str, typer.Option("--export")] = "json",
+    command: Annotated[list[str] | None, typer.Argument()] = None,
 ) -> None:
-    """Capture run context, execute checks, and persist an audit record."""
-    config = load_config("helios.toml" if Path("helios.toml").exists() else None)
-    storage = AuditStorage(f"sqlite:///{Path(config.audit_db).expanduser()}")
+    """Run or wrap a pipeline, audit artifacts, sign, store, and export report."""
+    if config:
+        config_path = str(config)
+    elif Path("helios.toml").exists():
+        config_path = "helios.toml"
+    else:
+        config_path = None
+    settings = load_config(config_path)
+    storage = AuditStorage(f"sqlite:///{settings.audit_db}")
+    start_time = datetime.now(UTC)
 
+    if command:
+        return_code = _run_streaming_command(command, work_dir=work_dir)
+        if return_code != 0:
+            console.print(
+                f"[red]Wrapped command exited with code {return_code}.[/red] "
+                "Check pipeline logs and retry with corrected parameters."
+            )
+
+    parser_context: RunContext
+    containers = []
     if pipeline == "nextflow":
-        context = nextflow_context(work_dir, output_dir, pipeline_name="nextflow-pipeline")
-        trace_file = work_dir / "trace.txt"
-        containers = extract_containers(parse_trace(trace_file)) if trace_file.exists() else []
+        nextflow_parser = NextflowRunParser(work_dir=work_dir, output_dir=output_dir)
+        parser_context = nextflow_parser.build_run_context()
+        containers = nextflow_parser.get_containers()
     elif pipeline == "snakemake":
-        context = snakemake_context(work_dir, output_dir, pipeline_name="snakemake-pipeline")
-        containers = []
+        snakemake_parser = SnakemakeRunParser(snakemake_dir=work_dir, output_dir=output_dir)
+        parser_context = snakemake_parser.build_run_context()
+        containers = snakemake_parser.get_containers()
     else:
         raise typer.BadParameter("pipeline must be nextflow or snakemake")
 
-    checks = [check.run(context) for check in _collect_checks()]
-    input_files: list[FileHash] = []
+    registry = CheckRegistry()
+    enabled_ids = _resolve_enabled_checks(registry, settings.checks.enabled)
+    checks = registry.run_all(parser_context, enabled=enabled_ids)
+    input_files = _hash_inputs_from_parameters(parser_context)
     output_files: list[FileHash] = []
-    for artifact in context.artifacts:
+    for artifact in parser_context.artifacts:
         digest = sha256_file(artifact)
         output_files.append(
             FileHash(path=str(artifact), sha256=digest, size_bytes=artifact.stat().st_size)
         )
 
     record = AuditRecord(
-        pipeline_name=context.pipeline_name,
-        executor=context.executor,
-        start_time=datetime.now(UTC),
+        pipeline_name=parser_context.pipeline_name,
+        executor=parser_context.executor,
+        start_time=start_time,
         end_time=datetime.now(UTC),
         input_files=input_files,
         output_files=output_files,
         containers=containers,
-        parameters=context.parameters,
+        parameters=parser_context.parameters,
         checks=checks,
     )
-    key_path = Path(config.signing_key).expanduser()
-    if key_path.exists():
-        record = sign_record(record, key_path)
+    if not no_sign and settings.signing_key.exists():
+        record = sign_record(record, settings.signing_key)
     storage.save_record(record)
-    console.print(f"[green]Run recorded:[/green] {record.run_id}")
+
+    report_path = _export_record(record, export_format, settings.export.output_dir)
+    score = registry.compute_score(record.checks)
+    summary = Table(title="HELIOS Run Summary")
+    summary.add_column("Run")
+    summary.add_column("Pipeline")
+    summary.add_column("Score")
+    summary.add_column("Grade")
+    summary.add_row(str(record.run_id), record.pipeline_name, str(score.score), score.grade)
+    console.print(summary)
+    console.print(
+        Panel(
+            f"Report: {report_path}\nChecks: {len(record.checks)}\n"
+            f"Passed={score.passed}, Warned={score.warned}, Failed={score.failed}",
+            title="Audit Completed",
+            border_style="green" if score.failed == 0 else "yellow",
+        )
+    )
 
 
 @app.command()
 def validate(run_id: UUID) -> None:
     """Re-run checks against stored run artifact context."""
-    config = load_config("helios.toml" if Path("helios.toml").exists() else None)
-    storage = AuditStorage(f"sqlite:///{Path(config.audit_db).expanduser()}")
+    settings = load_config("helios.toml" if Path("helios.toml").exists() else None)
+    storage = AuditStorage(f"sqlite:///{settings.audit_db}")
     record = storage.get_record(run_id)
     if record is None:
         raise typer.BadParameter(f"Run {run_id} not found")
 
     context = _build_context_from_record(record)
-    rerun_results = [check.run(context) for check in _collect_checks()]
-    status_counts = {"pass": 0, "warn": 0, "fail": 0}
+    registry = CheckRegistry()
+    enabled_ids = _resolve_enabled_checks(registry, settings.checks.enabled)
+    rerun_results = registry.run_all(context, enabled=enabled_ids)
+    status_counts = {"pass": 0, "warn": 0, "fail": 0, "skip": 0, "info": 0}
     for result in rerun_results:
         status_counts[result.status] += 1
 
@@ -158,26 +189,20 @@ def report(
     format: Literal["json", "pdf", "rocrate"] = typer.Option("json", "--format"),
 ) -> None:
     """Export report in JSON, PDF, or RO-Crate format."""
-    config = load_config("helios.toml" if Path("helios.toml").exists() else None)
-    storage = AuditStorage(f"sqlite:///{Path(config.audit_db).expanduser()}")
+    settings = load_config("helios.toml" if Path("helios.toml").exists() else None)
+    storage = AuditStorage(f"sqlite:///{settings.audit_db}")
     record = storage.get_record(run_id)
     if record is None:
         raise typer.BadParameter(f"Run {run_id} not found")
 
-    output_dir = Path(config.export.output_dir).expanduser()
-    if format == "json":
-        out = export_json(record, output_dir / f"{run_id}.json")
-    elif format == "pdf":
-        out = export_pdf(record, output_dir / f"{run_id}.pdf")
-    elif format == "rocrate":
-        out = export_rocrate(record, output_dir / str(run_id))
+    out = _export_record(record, format, settings.export.output_dir)
     console.print(f"[green]Report exported:[/green] {out}")
 
 
 @app.command()
 def status(limit: int = 10) -> None:
     """Show recent run compliance statuses."""
-    storage = AuditStorage()
+    storage = AuditStorage(f"sqlite:///{HeliosSettings().audit_db}")
     records = storage.list_records(limit=limit)
     table = Table(title="HELIOS Runs")
     table.add_column("Run ID")
@@ -190,13 +215,43 @@ def status(limit: int = 10) -> None:
             status_value = "fail"
         elif any(check.status == "warn" for check in record.checks):
             status_value = "warn"
+        score = CheckRegistry().compute_score(record.checks).score
+        score_color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
         table.add_row(
             str(record.run_id),
             record.pipeline_name,
             record.start_time.isoformat(),
-            status_value,
+            f"[{score_color}]{score}[/{score_color}] ({status_value})",
         )
     console.print(table)
+
+
+@app.command("serve")
+def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True) -> None:
+    """Start the HELIOS dashboard web server."""
+    settings = HeliosSettings()
+    app_instance = create_app(settings=settings)
+    if open_browser:
+        webbrowser.open(f"http://{host}:{port}/static/index.html")
+    uvicorn.run(app_instance, host=host, port=port, log_level=settings.log_level.lower())
+
+
+@app.command("snakemake-wrap")
+def snakemake_wrap(
+    command: Annotated[list[str] | None, typer.Argument()] = None,
+    work_dir: Annotated[Path, typer.Option("--work-dir")] = Path("."),
+    output_dir: Annotated[Path, typer.Option("--output-dir")] = Path("./results"),
+) -> None:
+    """Wrap Snakemake execution and trigger post-run audit."""
+    if not command:
+        raise typer.BadParameter(
+            "Provide command after -- e.g. helios snakemake-wrap -- snakemake --cores 4"
+        )
+    exit_code = run_wrapped_snakemake(command, work_dir=work_dir, output_dir=output_dir)
+    if exit_code != 0:
+        console.print(f"[red]Snakemake exited with code {exit_code}[/red]")
+        raise typer.Exit(code=exit_code)
+    console.print("[green]Snakemake wrapped audit complete[/green]")
 
 
 @key_app.command("generate")
@@ -226,4 +281,77 @@ def key_show() -> None:
 
 if __name__ == "__main__":
     app()
+
+
+def _hash_inputs_from_parameters(context: RunContext) -> list[FileHash]:
+    """Best-effort input hashing from context parameter file paths."""
+    output: list[FileHash] = []
+    for value in context.parameters.values():
+        if not isinstance(value, str):
+            continue
+        path = Path(value)
+        if path.exists() and path.is_file():
+            output.append(
+                FileHash(path=str(path), sha256=sha256_file(path), size_bytes=path.stat().st_size)
+            )
+    return output
+
+
+def _export_record(record: AuditRecord, format_name: str, output_dir: Path) -> Path:
+    """Export report in selected format and return generated path."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if format_name == "json":
+        return export_json(record, output_dir / f"{record.run_id}.json")
+    if format_name == "pdf":
+        return export_pdf(record, output_dir / f"{record.run_id}.pdf")
+    if format_name == "rocrate":
+        return export_rocrate(record, output_dir / str(record.run_id))
+    raise typer.BadParameter("export format must be json, pdf, or rocrate")
+
+
+def _run_streaming_command(command: list[str], work_dir: Path) -> int:
+    """Run subprocess and stream stdout/stderr to terminal with Rich."""
+    process = subprocess.Popen(
+        command,
+        cwd=work_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    lines: list[str] = []
+    with Live(console=console, refresh_per_second=8) as live:
+        if process.stdout is not None:
+            for line in process.stdout:
+                lines.append(line.rstrip("\n"))
+                visible = "\n".join(lines[-20:])
+                live.update(
+                    Panel(
+                        Text(visible, style="cyan"),
+                        title="Pipeline Output",
+                        border_style="cyan",
+                    )
+                )
+    return process.wait()
+
+
+def _resolve_enabled_checks(registry: CheckRegistry, configured: list[str]) -> list[str]:
+    """Resolve configured check names or IDs to registered check identifiers."""
+    registered = registry.get_registered_checks()
+    by_name = {
+        cls.__name__.lower().replace("_", ""): check_id
+        for check_id, cls in registered.items()
+    }
+    resolved: list[str] = []
+    for entry in configured:
+        if entry in registered:
+            resolved.append(entry)
+            continue
+        key = entry.replace("-", "_").replace(" ", "_").lower().replace("_", "")
+        if not key.endswith("check"):
+            key = f"{key}check"
+        matched = by_name.get(key)
+        if matched:
+            resolved.append(matched)
+    return resolved or list(registered.keys())
 

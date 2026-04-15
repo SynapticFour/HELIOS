@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HELIOS Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root { --bg:#0f1117; --panel:#171a23; --panel-2:#1d2230; --line:#2a3042; --text:#e7edf8; --muted:#9aa7bd; --accent:#00d4aa; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;}
+    body { margin:0; background:var(--bg); color:var(--text); font-family:"DM Sans",sans-serif;}
+    .mono { font-family:"JetBrains Mono",monospace; }
+    header { padding:16px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;}
+    a { color:var(--accent); text-decoration:none; }
+    nav a { margin-right:14px; }
+    .container { padding:16px 22px; }
+    .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:14px; }
+    .tile,.panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+    .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:1px; }
+    .value { font-size:22px; font-weight:700; margin-top:6px; }
+    .row { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+    input,select,button { background:var(--panel-2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px; }
+    button { cursor:pointer; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { border-bottom:1px solid var(--line); padding:8px; text-align:left; }
+    .badge { padding:3px 8px; border-radius:999px; font-size:12px; }
+    .g { background:rgba(34,197,94,.2); color:var(--ok); }
+    .y { background:rgba(245,158,11,.2); color:var(--warn); }
+    .r { background:rgba(239,68,68,.2); color:var(--bad); }
+    .tabs button.active { border-color:var(--accent); color:var(--accent); }
+    .muted { color:var(--muted); }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><strong style="color:var(--accent)">HELIOS</strong> Dashboard</div>
+    <nav>
+      <a href="#/">Runs</a>
+      <a href="#/stats">Analytics</a>
+    </nav>
+  </header>
+  <main class="container" id="app"></main>
+
+  <script type="module">
+    const app = document.getElementById("app");
+    const api = (path) => fetch(path).then(async r => { if (!r.ok) throw new Error((await r.json()).detail || "Request failed"); return r.json(); });
+    const scoreBadge = (score) => score >= 80 ? "g" : score >= 60 ? "y" : "r";
+    const truncate = (v, n=10) => v.length > n ? `${v.slice(0, n)}...` : v;
+    const loading = (msg="Loading...") => `<div class="panel">${msg}</div>`;
+    const empty = (msg="No runs yet.") => `<div class="panel muted">${msg}</div>`;
+    const err = (e) => `<div class="panel"><span class="r badge">ERROR</span> ${e.message}</div>`;
+
+    async function renderOverview() {
+      app.innerHTML = loading("Loading run overview...");
+      try {
+        const [runs, stats] = await Promise.all([api("/api/runs"), api("/api/stats/overview")]);
+        app.innerHTML = `
+          <section class="tiles">
+            <div class="tile"><div class="label">Total Runs</div><div class="value">${stats.total_runs}</div></div>
+            <div class="tile"><div class="label">Average Score</div><div class="value">${stats.avg_score}</div></div>
+            <div class="tile"><div class="label">GRCh38 Adoption %</div><div class="value">${stats.grch38_adoption_rate}</div></div>
+            <div class="tile"><div class="label">Failing Pipelines</div><div class="value">${runs.filter(r=>r.status==="fail").length}</div></div>
+          </section>
+          <section class="panel">
+            <div class="row">
+              <input id="filterPipeline" placeholder="Pipeline name" />
+              <input id="filterDateStart" type="date" />
+              <input id="filterDateEnd" type="date" />
+              <select id="filterStatus"><option value="">Any status</option><option>pass</option><option>warn</option><option>fail</option></select>
+              <input id="filterScore" type="number" placeholder="Min score" />
+              <button id="applyFilters">Apply</button>
+            </div>
+            <table>
+              <thead><tr><th>Run ID</th><th>Pipeline</th><th>Date</th><th>Score</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="runsBody"></tbody>
+            </table>
+          </section>`;
+        const body = document.getElementById("runsBody");
+        const drawRows = (items) => {
+          if (!items.length) { body.innerHTML = `<tr><td colspan="6" class="muted">No matching runs.</td></tr>`; return; }
+          body.innerHTML = items.map(run => `<tr>
+            <td class="mono">${truncate(run.run_id, 12)}</td>
+            <td>${run.pipeline_name}</td>
+            <td>${new Date(run.start_time).toLocaleString()}</td>
+            <td><span class="badge ${scoreBadge(run.score)}">${run.score}</span></td>
+            <td>${run.status}</td>
+            <td><a href="#/run/${run.run_id}">View</a></td>
+          </tr>`).join("");
+        };
+        drawRows(runs);
+        document.getElementById("applyFilters").onclick = () => {
+          const p = document.getElementById("filterPipeline").value.toLowerCase();
+          const s = document.getElementById("filterStatus").value;
+          const min = Number(document.getElementById("filterScore").value || 0);
+          const d1 = document.getElementById("filterDateStart").value;
+          const d2 = document.getElementById("filterDateEnd").value;
+          const filtered = runs.filter(r => (!p || r.pipeline_name.toLowerCase().includes(p))
+            && (!s || r.status===s)
+            && r.score >= min
+            && (!d1 || new Date(r.start_time) >= new Date(d1))
+            && (!d2 || new Date(r.start_time) <= new Date(d2)));
+          drawRows(filtered);
+        };
+      } catch (e) { app.innerHTML = err(e); }
+    }
+
+    async function renderRun(runId) {
+      app.innerHTML = loading("Loading run details...");
+      try {
+        const [run, score] = await Promise.all([api(`/api/runs/${runId}`), api(`/api/runs/${runId}/score`)]);
+        app.innerHTML = `
+          <section class="panel">
+            <h2 class="mono">${run.run_id}</h2>
+            <div class="muted">${run.pipeline_name} · ${run.executor} · ${new Date(run.start_time).toLocaleString()}</div>
+            <svg width="180" height="180" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="44" stroke="#2a3042" stroke-width="10" fill="none"></circle>
+              <circle cx="60" cy="60" r="44" stroke="var(--accent)" stroke-width="10" fill="none"
+                stroke-dasharray="${2.764*score.score} 276.4" transform="rotate(-90 60 60)"></circle>
+              <text x="60" y="55" text-anchor="middle" class="mono" fill="white" font-size="16">${score.grade}</text>
+              <text x="60" y="74" text-anchor="middle" class="mono" fill="#9aa7bd" font-size="10">${score.score}</text>
+            </svg>
+          </section>
+          <section class="panel">
+            <div class="tabs row">
+              <button data-tab="checks" class="active">Checks</button>
+              <button data-tab="files">Files</button>
+              <button data-tab="containers">Containers</button>
+              <button data-tab="export">Export</button>
+            </div>
+            <div id="tab-checks"></div>
+            <div id="tab-files" class="hidden"></div>
+            <div id="tab-containers" class="hidden"></div>
+            <div id="tab-export" class="hidden"></div>
+          </section>`;
+        const tc = document.getElementById("tab-checks");
+        tc.innerHTML = `<table><thead><tr><th>ID</th><th>Status</th><th>Message</th><th>Evidence</th></tr></thead><tbody>${
+          run.checks.map(c=>`<tr><td class="mono">${c.check_id}</td><td><span class="badge ${c.status==='fail'?'r':c.status==='warn'?'y':'g'}">${c.status}</span></td><td>${c.message}</td><td><details><summary>View</summary><pre class="mono">${JSON.stringify(c.evidence,null,2)}</pre></details></td></tr>`).join("")
+        }</tbody></table>`;
+        document.getElementById("tab-files").innerHTML = `<table><thead><tr><th>Type</th><th>Path</th><th>Hash</th><th>Size</th></tr></thead><tbody>${
+          [...run.input_files.map(f=>({...f,t:"input"})),...run.output_files.map(f=>({...f,t:"output"}))]
+          .map(f=>`<tr><td>${f.t}</td><td>${f.path}</td><td class="mono">${f.sha256.slice(0,8)}...${f.sha256.slice(-8)}</td><td>${f.size_bytes}</td></tr>`).join("")
+        }</tbody></table>`;
+        document.getElementById("tab-containers").innerHTML = `<table><thead><tr><th>Name</th><th>Tag</th><th>Pinned</th></tr></thead><tbody>${
+          run.containers.map(c=>`<tr><td>${c.name}</td><td>${c.tag}</td><td>${c.pinned ? "✅":"⚠️"}</td></tr>`).join("")
+        }</tbody></table>`;
+        document.getElementById("tab-export").innerHTML = `
+          <div class="row">
+            <a href="/api/reports/${runId}/json"><button>JSON</button></a>
+            <a href="/api/reports/${runId}/pdf"><button>PDF</button></a>
+            <a href="/api/reports/${runId}/rocrate"><button>RO-Crate</button></a>
+            <a href="/api/reports/${runId}/ai-act"><button>AI Act</button></a>
+          </div>`;
+        document.querySelectorAll(".tabs button").forEach(btn=>btn.onclick = () => {
+          document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+          btn.classList.add("active");
+          ["checks","files","containers","export"].forEach(t => document.getElementById(`tab-${t}`).classList.add("hidden"));
+          document.getElementById(`tab-${btn.dataset.tab}`).classList.remove("hidden");
+        });
+      } catch (e) { app.innerHTML = err(e); }
+    }
+
+    async function renderStats() {
+      app.innerHTML = loading("Loading analytics...");
+      try {
+        const [overview, trends] = await Promise.all([api("/api/stats/overview"), api("/api/stats/trends")]);
+        app.innerHTML = `<div class="panel"><h2>Analytics</h2>
+          <canvas id="line"></canvas><canvas id="bar"></canvas><canvas id="donut"></canvas>
+          <table><thead><tr><th>Pipeline</th><th>Points</th></tr></thead><tbody>${
+            Object.entries(trends.pipelines).map(([k,v])=>`<tr><td>${k}</td><td>${v.length}</td></tr>`).join("")
+          }</tbody></table></div>`;
+        new Chart(document.getElementById("line"), { type:"line", data:{ labels:overview.vus_rate_trend.map(x=>x.date), datasets:[{label:"VUS Rate",data:overview.vus_rate_trend.map(x=>x.rate),borderColor:"#00d4aa"}]}});
+        new Chart(document.getElementById("bar"), { type:"bar", data:{ labels:overview.failing_checks_top5.map(x=>x.check_id), datasets:[{label:"Failures",data:overview.failing_checks_top5.map(x=>x.count),backgroundColor:"#ef4444"}]}});
+        new Chart(document.getElementById("donut"), { type:"doughnut", data:{ labels:["GRCh38","Other"], datasets:[{data:[overview.grch38_adoption_rate,100-overview.grch38_adoption_rate], backgroundColor:["#00d4aa","#2a3042"]}] }});
+      } catch (e) { app.innerHTML = err(e); }
+    }
+
+    async function route() {
+      const hash = location.hash || "#/";
+      if (hash === "#/" || hash === "") return renderOverview();
+      if (hash.startsWith("#/run/")) return renderRun(hash.replace("#/run/", ""));
+      if (hash === "#/stats") return renderStats();
+      app.innerHTML = empty("Unknown route.");
+    }
+    window.addEventListener("hashchange", route);
+    route();
+  </script>
+</body>
+</html>

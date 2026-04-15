@@ -70,3 +70,14 @@ class AuditStorage:
             rows = session.exec(statement).all()
             return [AuditRecord.model_validate_json(row.record_json) for row in rows]
 
+    def delete_record(self, run_id: UUID) -> bool:
+        """Delete an audit record by run identifier."""
+        with Session(self.engine) as session:
+            statement = select(AuditRecordRow).where(AuditRecordRow.run_id == run_id)
+            row = session.exec(statement).first()
+            if row is None:
+                return False
+            session.delete(row)
+            session.commit()
+            return True
+
