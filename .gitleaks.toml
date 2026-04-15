@@ -1,0 +1,13 @@
+# Gitleaks configuration (see https://github.com/gitleaks/gitleaks)
+#
+# Linux CI can occasionally false-positive the default `sidekiq-secret` rule on
+# Markdown that links to `.github/workflows/*.yml` (same content passes on macOS
+# with the stock config). Allowlist README for that rule only.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "sidekiq-secret"
+[rules.allowlist]
+paths = ["README.md"]
