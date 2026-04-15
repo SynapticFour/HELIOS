@@ -25,25 +25,41 @@ def test_dashboard_api_roundtrip(tmp_path: Path) -> None:
 
         with upload.open("rb") as handle:
             response = client.post(
-                "/api/runs/import",
+                "/api/v1/runs/import",
                 files={"file": ("record.json", handle, "application/json")},
             )
         assert response.status_code == 200
 
-        listed = client.get("/api/runs")
+        listed = client.get("/api/v1/runs")
         assert listed.status_code == 200
         runs = listed.json()
         assert any(run["run_id"] == str(record.run_id) for run in runs)
 
-        fetched = client.get(f"/api/runs/{record.run_id}")
+        fetched = client.get(f"/api/v1/runs/{record.run_id}")
         assert fetched.status_code == 200
         assert fetched.json()["run_id"] == str(record.run_id)
 
-        overview = client.get("/api/stats/overview")
+        overview = client.get("/api/v1/stats/overview")
         assert overview.status_code == 200
         assert "total_runs" in overview.json()
 
-        report = client.get(f"/api/reports/{record.run_id}/json")
+        trends = client.get("/api/v1/stats/trends")
+        assert trends.status_code == 200
+        assert "pipelines" in trends.json()
+
+        report = client.get(f"/api/v1/reports/{record.run_id}/json")
         assert report.status_code == 200
         assert "attachment" in report.headers.get("content-disposition", "")
+
+        pdf = client.get(f"/api/v1/reports/{record.run_id}/pdf")
+        assert pdf.status_code == 200
+        assert pdf.content.startswith(b"%PDF")
+
+        rocrate = client.get(f"/api/v1/reports/{record.run_id}/rocrate")
+        assert rocrate.status_code == 200
+        assert rocrate.headers["content-type"] == "application/zip"
+
+        ai_act = client.get(f"/api/v1/reports/{record.run_id}/ai-act")
+        assert ai_act.status_code == 200
+        assert "ai_act_art11_fragment" in ai_act.json()
 

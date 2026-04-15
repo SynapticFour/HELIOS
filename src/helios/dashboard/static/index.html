@@ -56,7 +56,7 @@
     async function renderOverview() {
       app.innerHTML = loading("Loading run overview...");
       try {
-        const [runs, stats] = await Promise.all([api("/api/runs"), api("/api/stats/overview")]);
+        const [runs, stats] = await Promise.all([api("/api/v1/runs"), api("/api/v1/stats/overview")]);
         app.innerHTML = `
           <section class="tiles">
             <div class="tile"><div class="label">Total Runs</div><div class="value">${stats.total_runs}</div></div>
@@ -110,7 +110,7 @@
     async function renderRun(runId) {
       app.innerHTML = loading("Loading run details...");
       try {
-        const [run, score] = await Promise.all([api(`/api/runs/${runId}`), api(`/api/runs/${runId}/score`)]);
+        const [run, score] = await Promise.all([api(`/api/v1/runs/${runId}`), api(`/api/v1/runs/${runId}/score`)]);
         app.innerHTML = `
           <section class="panel">
             <h2 class="mono">${run.run_id}</h2>
@@ -148,10 +148,10 @@
         }</tbody></table>`;
         document.getElementById("tab-export").innerHTML = `
           <div class="row">
-            <a href="/api/reports/${runId}/json"><button>JSON</button></a>
-            <a href="/api/reports/${runId}/pdf"><button>PDF</button></a>
-            <a href="/api/reports/${runId}/rocrate"><button>RO-Crate</button></a>
-            <a href="/api/reports/${runId}/ai-act"><button>AI Act</button></a>
+            <a href="/api/v1/reports/${runId}/json"><button>JSON</button></a>
+            <a href="/api/v1/reports/${runId}/pdf"><button>PDF</button></a>
+            <a href="/api/v1/reports/${runId}/rocrate"><button>RO-Crate</button></a>
+            <a href="/api/v1/reports/${runId}/ai-act"><button>AI Act</button></a>
           </div>`;
         document.querySelectorAll(".tabs button").forEach(btn=>btn.onclick = () => {
           document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
@@ -165,7 +165,7 @@
     async function renderStats() {
       app.innerHTML = loading("Loading analytics...");
       try {
-        const [overview, trends] = await Promise.all([api("/api/stats/overview"), api("/api/stats/trends")]);
+        const [overview, trends] = await Promise.all([api("/api/v1/stats/overview"), api("/api/v1/stats/trends")]);
         app.innerHTML = `<div class="panel"><h2>Analytics</h2>
           <canvas id="line"></canvas><canvas id="bar"></canvas><canvas id="donut"></canvas>
           <table><thead><tr><th>Pipeline</th><th>Points</th></tr></thead><tbody>${

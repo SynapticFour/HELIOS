@@ -17,7 +17,7 @@ from helios.export.json_export import _build_ai_act_art11_fragment, export_json
 from helios.export.pdf_export import export_pdf
 from helios.export.rocrate import export_rocrate
 
-router = APIRouter(prefix="/api/reports", tags=["reports"])
+router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
 
 def _get_storage(request: Request) -> AuditStorage:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import webbrowser
 from datetime import UTC, datetime
@@ -34,8 +35,11 @@ from helios.integrations.snakemake_wrapper import run_wrapped_snakemake
 
 app = typer.Typer(help="HELIOS genomics pipeline audit and validation CLI.")
 key_app = typer.Typer(help="Manage HELIOS signing keys.")
+config_app = typer.Typer(help="Inspect and validate HELIOS configuration.")
 app.add_typer(key_app, name="key")
+app.add_typer(config_app, name="config")
 console = Console()
+logger = logging.getLogger("helios.cli")
 
 
 def _build_context_from_record(record: AuditRecord) -> RunContext:
@@ -84,6 +88,7 @@ def run(
     else:
         config_path = None
     settings = load_config(config_path)
+    logging.basicConfig(level=settings.log_level.upper())
     storage = AuditStorage(f"sqlite:///{settings.audit_db}")
     start_time = datetime.now(UTC)
 
@@ -133,6 +138,8 @@ def run(
     if not no_sign and settings.signing_key.exists():
         record = sign_record(record, settings.signing_key)
     storage.save_record(record)
+    log = logging.LoggerAdapter(logger, {"run_id": str(record.run_id)})
+    log.info("Audit record persisted")
 
     report_path = _export_record(record, export_format, settings.export.output_dir)
     score = registry.compute_score(record.checks)
@@ -277,6 +284,24 @@ def key_show() -> None:
     from helios.core.signer import _public_fingerprint
 
     console.print(f"Fingerprint: {_public_fingerprint(public_key)}")
+
+
+@config_app.command("print")
+def config_print(path: Path | None = None) -> None:
+    """Print effective configuration as JSON."""
+    settings = load_config(str(path) if path else None)
+    console.print_json(settings.model_dump_json(indent=2))
+
+
+@config_app.command("validate")
+def config_validate(path: Path | None = None) -> None:
+    """Validate configuration file and environment settings."""
+    try:
+        settings = load_config(str(path) if path else None)
+        console.print(f"[green]Configuration valid[/green] (log level: {settings.log_level})")
+    except Exception as exc:
+        console.print(f"[red]Configuration invalid:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
 
 
 if __name__ == "__main__":

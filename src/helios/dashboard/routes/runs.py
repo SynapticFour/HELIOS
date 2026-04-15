@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, cast
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
@@ -11,8 +11,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from helios.checks import CheckRegistry
 from helios.core.audit_record import AuditRecord
 from helios.core.storage import AuditStorage
+from helios.dashboard.models import DeleteResponse, RunImportResponse, RunListItem
 
-router = APIRouter(prefix="/api/runs", tags=["runs"])
+router = APIRouter(prefix="/api/v1/runs", tags=["runs"])
 
 
 def _get_storage(request: Request) -> AuditStorage:
@@ -33,7 +34,7 @@ def list_runs(
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
     min_score: int | None = Query(None, ge=0, le=100),
-) -> list[dict[str, object]]:
+) -> list[RunListItem]:
     """List runs with pagination and optional filters."""
     storage = _get_storage(request)
     records = storage.list_records(limit=limit)
@@ -48,21 +49,21 @@ def list_runs(
         end = datetime.fromisoformat(end_date)
         records = [record for record in records if record.start_time <= end]
     records = records[offset:]
-    payload: list[dict[str, Any]] = []
+    payload: list[RunListItem] = []
     for record in records:
         score = CheckRegistry().compute_score(record.checks).score
         payload.append(
-            {
-                "run_id": str(record.run_id),
-                "pipeline_name": record.pipeline_name,
-                "executor": record.executor,
-                "start_time": record.start_time.isoformat(),
-                "score": score,
-                "status": _status_for_record(record),
-            }
+            RunListItem(
+                run_id=str(record.run_id),
+                pipeline_name=record.pipeline_name,
+                executor=record.executor,
+                start_time=record.start_time.isoformat(),
+                score=score,
+                status=_status_for_record(record),
+            )
         )
     if min_score is not None:
-        payload = [item for item in payload if int(item["score"]) >= min_score]
+        payload = [item for item in payload if item.score >= min_score]
     return payload
 
 
@@ -88,21 +89,21 @@ def get_run_score(run_id: UUID, storage: AuditStorage = STORAGE_DEP) -> dict[str
 async def import_run(
     file: UploadFile = IMPORT_FILE,
     storage: AuditStorage = STORAGE_DEP,
-) -> dict[str, str]:
+) -> RunImportResponse:
     """Import an AuditRecord JSON file."""
     raw = await file.read()
     record = AuditRecord.model_validate_json(raw)
     storage.save_record(record)
-    return {"run_id": str(record.run_id)}
+    return RunImportResponse(run_id=str(record.run_id))
 
 
 @router.delete("/{run_id}")
-def delete_run(run_id: UUID, storage: AuditStorage = STORAGE_DEP) -> dict[str, bool]:
+def delete_run(run_id: UUID, storage: AuditStorage = STORAGE_DEP) -> DeleteResponse:
     """Delete a run record by ID."""
     deleted = storage.delete_record(run_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Run not found")
-    return {"deleted": True}
+    return DeleteResponse(deleted=True)
 
 
 def _status_for_record(record: AuditRecord) -> str:
