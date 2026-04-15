@@ -74,11 +74,25 @@ class ReferenceGenomeCheck(BaseCheck):
                 evidence=evidence,
             )
 
+        has_source_fields = any("UR" in entry or "M5" in entry for entry in sq_entries)
         if mentions_grch38 or (has_chr_prefix and has_numeric):
+            if has_source_fields:
+                return CheckResult(
+                    check_id=self.check_id,
+                    status="warn",
+                    message=(
+                        "Reference naming resembles GRCh38/hg38, "
+                        "but UR/M5 fields did not match known GRCh38 sources."
+                    ),
+                    evidence=evidence,
+                )
             return CheckResult(
                 check_id=self.check_id,
-                status="pass",
-                message="Reference naming is compatible with GRCh38/hg38.",
+                status="warn",
+                message=(
+                    "Reference naming is compatible with GRCh38/hg38 "
+                    "but lacks UR/M5 provenance."
+                ),
                 evidence=evidence,
             )
 

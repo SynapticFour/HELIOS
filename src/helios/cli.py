@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 from uuid import UUID
 
 import typer
@@ -19,6 +20,7 @@ from helios.checks.vus_rate import VUSRateCheck
 from helios.config import load_config
 from helios.core.audit_record import AuditRecord, FileHash
 from helios.core.hasher import sha256_file
+from helios.core.run_context import RunContext
 from helios.core.signer import generate_keypair, sign_record
 from helios.core.storage import AuditStorage
 from helios.export.json_export import export_json
@@ -47,6 +49,24 @@ def _collect_checks() -> list[BaseCheck]:
     ]
 
 
+def _build_context_from_record(record: AuditRecord) -> RunContext:
+    """Reconstruct a run context from a persisted audit record."""
+
+    artifacts = [
+        Path(file_hash.path)
+        for file_hash in record.output_files
+        if Path(file_hash.path).exists()
+    ]
+    return RunContext(
+        pipeline_name=record.pipeline_name,
+        executor=record.executor,
+        work_dir=Path("."),
+        output_dir=Path("."),
+        parameters=record.parameters,
+        artifacts=artifacts,
+    )
+
+
 @app.command()
 def init(path: Path = Path("helios.toml")) -> None:
     """Initialize HELIOS configuration in the current directory."""
@@ -59,7 +79,7 @@ def init(path: Path = Path("helios.toml")) -> None:
 
 @app.command()
 def run(
-    pipeline: str = PIPELINE_OPTION,
+    pipeline: Literal["nextflow", "snakemake"] = PIPELINE_OPTION,
     work_dir: Path = WORK_DIR_OPTION,
     output_dir: Path = OUTPUT_DIR_OPTION,
 ) -> None:
@@ -107,23 +127,35 @@ def run(
 @app.command()
 def validate(run_id: UUID) -> None:
     """Re-run checks against stored run artifact context."""
-    storage = AuditStorage()
+    config = load_config("helios.toml" if Path("helios.toml").exists() else None)
+    storage = AuditStorage(f"sqlite:///{Path(config.audit_db).expanduser()}")
     record = storage.get_record(run_id)
     if record is None:
         raise typer.BadParameter(f"Run {run_id} not found")
+
+    context = _build_context_from_record(record)
+    rerun_results = [check.run(context) for check in _collect_checks()]
     status_counts = {"pass": 0, "warn": 0, "fail": 0}
-    for check in record.checks:
-        status_counts[check.status] += 1
+    for result in rerun_results:
+        status_counts[result.status] += 1
+
+    table = Table(title=f"Validation Results: {run_id}")
+    table.add_column("Check")
+    table.add_column("Status")
+    table.add_column("Message")
+    for result in rerun_results:
+        table.add_row(result.check_id, result.status, result.message)
+    console.print(table)
     console.print(
-        f"Validation replay for {run_id}: "
-        f"{status_counts['pass']} pass, {status_counts['warn']} warn, {status_counts['fail']} fail"
+        f"Re-run summary: {status_counts['pass']} pass, "
+        f"{status_counts['warn']} warn, {status_counts['fail']} fail"
     )
 
 
 @app.command()
 def report(
     run_id: UUID,
-    format: str = typer.Option("json", "--format"),
+    format: Literal["json", "pdf", "rocrate"] = typer.Option("json", "--format"),
 ) -> None:
     """Export report in JSON, PDF, or RO-Crate format."""
     config = load_config("helios.toml" if Path("helios.toml").exists() else None)
@@ -139,8 +171,6 @@ def report(
         out = export_pdf(record, output_dir / f"{run_id}.pdf")
     elif format == "rocrate":
         out = export_rocrate(record, output_dir / str(run_id))
-    else:
-        raise typer.BadParameter("format must be json, pdf, or rocrate")
     console.print(f"[green]Report exported:[/green] {out}")
 
 
