@@ -16,4 +16,3 @@ def test_sha256_file_with_progress(tmp_path: Path) -> None:
 
     assert len(digest) == 64
     assert progress_events[-1] == sample.stat().st_size
-

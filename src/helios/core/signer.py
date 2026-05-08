@@ -106,4 +106,3 @@ def verify_signature_bytes(fingerprint: str, payload: bytes, signature: bytes) -
 def verify_record(record: AuditRecord) -> bool:
     """Verify attached signature for a full audit record."""
     return record.verify_signature()
-

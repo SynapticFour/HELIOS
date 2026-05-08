@@ -34,9 +34,7 @@ class MANETranscriptCheck(BaseCheck):
     def run(self, context: RunContext) -> CheckResult:
         """Run transcript coverage check using MANE summary list."""
         vcfs = [
-            p
-            for p in context.artifacts
-            if p.suffix in {".vcf", ".gz"} and "vcf" in p.name.lower()
+            p for p in context.artifacts if p.suffix in {".vcf", ".gz"} and "vcf" in p.name.lower()
         ]
         if not vcfs:
             return CheckResult(
@@ -168,4 +166,3 @@ class MANETranscriptCheck(BaseCheck):
 
 
 ManeTranscriptCheck = MANETranscriptCheck
-

@@ -13,7 +13,7 @@ Genomics Pipeline Audit & Validation Framework for signed, reproducible complian
 ![PyPI](https://img.shields.io/pypi/v/helios-audit)
 ![Python](https://img.shields.io/pypi/pyversions/helios-audit)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
-![CI](https://img.shields.io/github/actions/workflow/status/example/helios/ci.yml?branch=main)
+![CI](https://img.shields.io/github/actions/workflow/status/SynapticFour/HELIOS/ci.yml?branch=main)
 
 ## Why HELIOS?
 
@@ -44,6 +44,21 @@ helios report --run-id <run-id> --format json
 ## Documentation
 
 See [`docs/index.md`](docs/index.md).
+
+## CI, Security, and Governance
+
+- Primary quality pipeline: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- Security/compliance automation:
+  - [.github/workflows/codeql.yml](.github/workflows/codeql.yml)
+  - [.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml)
+  - [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml)
+  - [.github/workflows/dependabot-smoke.yml](.github/workflows/dependabot-smoke.yml)
+- **Dependency Review** requires the GitHub **Dependency graph** for this repository (repository owner: **Settings → Security → Code security and analysis → Dependency graph**).
+- Repo governance:
+  - [`SECURITY.md`](SECURITY.md)
+  - [`CONTRIBUTING.md`](CONTRIBUTING.md)
+  - [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+  - [`.github/pull_request_template.md`](.github/pull_request_template.md)
 
 ## Compliance Coverage
 
@@ -76,4 +91,9 @@ Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 ## License
 
 Apache 2.0. See [`LICENSE`](LICENSE).
+
+## Important Notice
+
+HELIOS provides technical quality and compliance evidence support. It is not, by
+itself, a certification decision, legal determination, or regulatory approval.
 

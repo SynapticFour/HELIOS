@@ -163,4 +163,3 @@ def _split_container(ref: str) -> tuple[str, str, str | None]:
     else:
         name, tag = ref, ""
     return name, tag, digest
-

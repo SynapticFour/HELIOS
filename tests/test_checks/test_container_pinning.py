@@ -36,4 +36,3 @@ def test_container_pinning_fail_for_latest(tmp_path: Path) -> None:
     )
     result = check.run(context)
     assert result.status == "fail"
-

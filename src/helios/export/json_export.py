@@ -71,4 +71,3 @@ def _build_ai_act_art11_fragment(record: AuditRecord) -> dict[str, object]:
         "generated_at": datetime.now(UTC).isoformat(),
         "generated_by": f"HELIOS {__version__}",
     }
-

@@ -1,2 +1,1 @@
 """Dashboard API route modules."""
-

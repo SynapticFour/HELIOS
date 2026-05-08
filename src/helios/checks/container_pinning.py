@@ -69,4 +69,3 @@ class ContainerPinningCheck(BaseCheck):
             ):
                 files.append(path)
         return files
-

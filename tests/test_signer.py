@@ -18,4 +18,3 @@ def test_sign_and_verify_record(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("HELIOS_KEY_DIR", str(tmp_path))
     (tmp_path / "testkey.pub").write_bytes(public_key.read_bytes())
     assert verify_record(signed) is True
-

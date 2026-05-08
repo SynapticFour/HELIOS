@@ -41,4 +41,3 @@ def nextflow_trace_path(tmp_path: Path, fixture_dir: Path) -> Path:
         encoding="utf-8",
     )
     return target
-

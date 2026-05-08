@@ -137,4 +137,3 @@ def record_check_standard_map(check_id: str, record: AuditRecord) -> list[str]:
             mapping.append(f"https://bioschemas.org/{standard}")
         return mapping or ["https://schema.org/PropertyValue"]
     return ["https://schema.org/PropertyValue"]
-

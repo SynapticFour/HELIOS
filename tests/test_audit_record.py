@@ -16,4 +16,3 @@ def test_audit_record_json_roundtrip() -> None:
 def test_verify_signature_false_without_signature() -> None:
     record = AuditRecord(pipeline_name="demo", executor="nextflow")
     assert record.verify_signature() is False
-

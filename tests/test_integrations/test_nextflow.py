@@ -32,4 +32,3 @@ def test_missing_trace_file_is_graceful(tmp_path: Path) -> None:
     parser = NextflowRunParser(work_dir=tmp_path, output_dir=tmp_path)
     assert parser.parse_trace() == []
     assert parser.warnings
-

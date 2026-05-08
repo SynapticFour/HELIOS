@@ -14,13 +14,11 @@ def test_vus_rate_distribution_from_clnsig(tmp_path: Path) -> None:
         "##fileformat=VCFv4.2",
         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
     ]
+    lines.extend([f"1\t{100 + i}\t.\tA\tG\t100\tPASS\tCLNSIG=Pathogenic" for i in range(5)])
     lines.extend(
-        [f"1\t{100+i}\t.\tA\tG\t100\tPASS\tCLNSIG=Pathogenic" for i in range(5)]
+        [f"1\t{200 + i}\t.\tA\tC\t100\tPASS\tCLNSIG=Uncertain_significance" for i in range(3)]
     )
-    lines.extend(
-        [f"1\t{200+i}\t.\tA\tC\t100\tPASS\tCLNSIG=Uncertain_significance" for i in range(3)]
-    )
-    lines.extend([f"1\t{300+i}\t.\tG\tT\t100\tPASS\tCLNSIG=Benign" for i in range(2)])
+    lines.extend([f"1\t{300 + i}\t.\tG\tT\t100\tPASS\tCLNSIG=Benign" for i in range(2)])
     vcf.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     context = RunContext(
@@ -38,4 +36,3 @@ def test_vus_rate_distribution_from_clnsig(tmp_path: Path) -> None:
     assert result.evidence["histogram"]["PATHOGENIC"] == 5
     assert result.evidence["histogram"]["VUS"] == 3
     assert result.evidence["histogram"]["BENIGN"] == 2
-

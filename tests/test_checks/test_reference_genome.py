@@ -19,4 +19,3 @@ def test_reference_genome_pass_for_grch38_header(bam_header_path: Path, tmp_path
     )
     result = check.run(context)
     assert result.status == "pass"
-

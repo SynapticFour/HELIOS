@@ -17,8 +17,8 @@ def test_cli_config_commands(tmp_path: Path, monkeypatch) -> None:
     cfg = tmp_path / "helios.toml"
     cfg.write_text(
         "[helios]\n"
-        f"audit_db = \"{tmp_path / 'audit.db'}\"\n"
-        f"signing_key = \"{tmp_path / 'signing.key'}\"\n",
+        f'audit_db = "{tmp_path / "audit.db"}"\n'
+        f'signing_key = "{tmp_path / "signing.key"}"\n',
         encoding="utf-8",
     )
     runner = CliRunner()

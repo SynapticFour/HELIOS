@@ -34,4 +34,3 @@ def test_rocrate_contains_required_entities(tmp_path: Path) -> None:
     assert any(entity.get("@type") == "CreateAction" for entity in graph)
     assert any(entity.get("@type") == "SoftwareApplication" for entity in graph)
     assert (tmp_path / "crate" / "helios-audit.json").exists()
-
