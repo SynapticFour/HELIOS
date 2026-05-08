@@ -19,7 +19,6 @@ HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow a
 - Security policy: [SECURITY.md](../SECURITY.md)
 - Contribution policy: [CONTRIBUTING.md](../CONTRIBUTING.md)
 - Code of Conduct: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)
-- Parity status: [REPO-PARITY-REPORT.md](REPO-PARITY-REPORT.md)
 
 ## Notice
 

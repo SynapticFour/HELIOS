@@ -53,7 +53,7 @@ See [`docs/index.md`](docs/index.md).
   - [.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml)
   - [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml)
   - [.github/workflows/dependabot-smoke.yml](.github/workflows/dependabot-smoke.yml)
-- **Dependency Review** requires the GitHub **Dependency graph** for this repository (repository owner: **Settings → Security → Code security and analysis → Dependency graph**). Without it, that workflow reports that dependency review is not supported.
+- **Dependency Review** requires the GitHub **Dependency graph** for this repository (repository owner: **Settings → Security → Code security and analysis → Dependency graph**).
 - Repo governance:
   - [`SECURITY.md`](SECURITY.md)
   - [`CONTRIBUTING.md`](CONTRIBUTING.md)
