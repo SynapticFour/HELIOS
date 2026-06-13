@@ -302,10 +302,6 @@ def config_validate(path: Path | None = None) -> None:
         raise typer.Exit(code=1) from exc
 
 
-if __name__ == "__main__":
-    app()
-
-
 def _hash_inputs_from_parameters(context: RunContext) -> list[FileHash]:
     """Best-effort input hashing from context parameter file paths."""
     output: list[FileHash] = []
@@ -376,3 +372,7 @@ def _resolve_enabled_checks(registry: CheckRegistry, configured: list[str]) -> l
         if matched:
             resolved.append(matched)
     return resolved or list(registered.keys())
+
+
+if __name__ == "__main__":
+    app()

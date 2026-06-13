@@ -41,6 +41,14 @@ helios status
 helios report --run-id <run-id> --format json
 ```
 
+### Optional dashboard (Docker)
+
+```bash
+make up        # http://localhost:8765
+make down
+make destroy
+```
+
 ## Documentation
 
 See [`docs/index.md`](docs/index.md).
