@@ -8,11 +8,11 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: python -m mypy src/helios/
+        entry: python3 -m mypy src/helios/
         language: system
         pass_filenames: false
       - id: pytest
         name: pytest
-        entry: python -m pytest tests/ -q
+        entry: python3 -m pytest tests/ -q
         language: system
         pass_filenames: false
