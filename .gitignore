@@ -13,4 +13,5 @@ venv/
 .helios/
 *.db
 *.key
-
+.env
+helios-data/

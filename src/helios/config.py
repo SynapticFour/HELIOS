@@ -45,6 +45,8 @@ class DashboardConfig(BaseModel):
     host: str = "127.0.0.1"
     port: int = 8765
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:8765"])
+    # Nested TOML/env: HELIOS_DASHBOARD__API_KEY (prefer top-level HELIOS_DASHBOARD_API_KEY).
+    api_key: str | None = None
 
 
 class HeliosSettings(BaseSettings):
@@ -64,6 +66,8 @@ class HeliosSettings(BaseSettings):
     checks: ChecksConfig = Field(default_factory=ChecksConfig)
     export: ExportConfig = Field(default_factory=ExportConfig)
     dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
+    # Preferred env: HELIOS_DASHBOARD_API_KEY (maps via env_prefix + field name).
+    dashboard_api_key: str | None = None
 
     def model_post_init(self, __context: object) -> None:
         """Expand home references for configured path settings."""
@@ -74,6 +78,26 @@ class HeliosSettings(BaseSettings):
             update={"output_dir": self.export.output_dir.expanduser()}
         )
         object.__setattr__(self, "export", export_value)
+        # Prefer HELIOS_DASHBOARD_API_KEY; fall back to nested dashboard.api_key.
+        resolved_key = self.dashboard_api_key or self.dashboard.api_key
+        if resolved_key != self.dashboard_api_key:
+            object.__setattr__(self, "dashboard_api_key", resolved_key)
+        if resolved_key != self.dashboard.api_key:
+            object.__setattr__(
+                self,
+                "dashboard",
+                self.dashboard.model_copy(update={"api_key": resolved_key}),
+            )
+
+    def require_dashboard_api_key(self) -> str:
+        """Return the configured dashboard API key or raise if missing."""
+        key = self.dashboard_api_key or self.dashboard.api_key
+        if not key:
+            raise ValueError(
+                "HELIOS_DASHBOARD_API_KEY is required to run the dashboard. "
+                "Generate a secret and export it before `helios serve` or `make up`."
+            )
+        return key
 
     @classmethod
     def settings_customise_sources(

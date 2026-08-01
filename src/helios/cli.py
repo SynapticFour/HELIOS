@@ -233,8 +233,13 @@ def status(limit: int = 10) -> None:
 
 @app.command("serve")
 def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True) -> None:
-    """Start the HELIOS dashboard web server."""
+    """Start the HELIOS dashboard web server (requires HELIOS_DASHBOARD_API_KEY)."""
     settings = HeliosSettings()
+    try:
+        settings.require_dashboard_api_key()
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
     app_instance = create_app(settings=settings)
     if open_browser:
         webbrowser.open(f"http://{host}:{port}/static/index.html")
