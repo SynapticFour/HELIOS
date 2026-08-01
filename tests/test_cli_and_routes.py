@@ -53,7 +53,13 @@ def test_cli_snakemake_wrap_paths(monkeypatch) -> None:
 
 
 def test_runs_routes_filters_and_delete(tmp_path: Path) -> None:
-    settings = HeliosSettings(audit_db=tmp_path / "api.db", signing_key=tmp_path / "none.key")
+    api_key = "route-test-key"
+    auth = {"X-API-Key": api_key}
+    settings = HeliosSettings(
+        audit_db=tmp_path / "api.db",
+        signing_key=tmp_path / "none.key",
+        dashboard_api_key=api_key,
+    )
     app_instance = create_app(settings=settings)
     with TestClient(app_instance) as client:
         good = AuditRecord(
@@ -70,15 +76,20 @@ def test_runs_routes_filters_and_delete(tmp_path: Path) -> None:
             payload = record.to_json().encode("utf-8")
             resp = client.post(
                 "/api/v1/runs/import",
+                headers=auth,
                 files={"file": ("record.json", payload, "application/json")},
             )
             assert resp.status_code == 200
 
-        listed = client.get("/api/v1/runs", params={"status": "fail", "min_score": 0})
+        listed = client.get(
+            "/api/v1/runs",
+            headers=auth,
+            params={"status": "fail", "min_score": 0},
+        )
         assert listed.status_code == 200
         assert all(item["status"] == "fail" for item in listed.json())
 
-        deleted = client.delete(f"/api/v1/runs/{good.run_id}")
+        deleted = client.delete(f"/api/v1/runs/{good.run_id}", headers=auth)
         assert deleted.status_code == 200
-        missing = client.delete(f"/api/v1/runs/{good.run_id}")
+        missing = client.delete(f"/api/v1/runs/{good.run_id}", headers=auth)
         assert missing.status_code == 404

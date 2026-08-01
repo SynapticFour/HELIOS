@@ -1,6 +1,6 @@
 # HELIOS Documentation
 
-**Status: Alpha.** HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow and Snakemake runs to generate signed, reproducible compliance evidence. Install from source (see [quickstart](quickstart.md)); the `helios-audit` name is reserved for a future PyPI release and is not published yet.
+**Status: Alpha.** HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow and Snakemake runs to generate signed, reproducible compliance evidence. Install from source until `v0.1.0` is tagged and published (see [quickstart](quickstart.md) and [RELEASING.md](../RELEASING.md)). HELIOS is **not** a certification or regulatory approval.
 
 - Start with the [quickstart](quickstart.md)
 - Review [architecture decisions](architecture.md)
@@ -12,10 +12,12 @@
 ## Delivery and Assurance
 
 - CI pipeline: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+- PyPI release workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml) — operator steps in [RELEASING.md](../RELEASING.md)
 - Security workflows:
   - [CodeQL](../.github/workflows/codeql.yml)
   - [Secret Scan](../.github/workflows/secret-scan.yml)
   - [Dependency Review](../.github/workflows/dependency-review.yml)
+- Dashboard API requires `HELIOS_DASHBOARD_API_KEY` (see README / `.env.example`)
 - Security policy: [SECURITY.md](../SECURITY.md)
 - Contribution policy: [CONTRIBUTING.md](../CONTRIBUTING.md)
 - Code of Conduct: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)

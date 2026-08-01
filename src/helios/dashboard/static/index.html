@@ -46,7 +46,41 @@
 
   <script type="module">
     const app = document.getElementById("app");
-    const api = (path) => fetch(path).then(async r => { if (!r.ok) throw new Error((await r.json()).detail || "Request failed"); return r.json(); });
+    const KEY_STORAGE = "helios_dashboard_api_key";
+
+    function getApiKey() {
+      let key = sessionStorage.getItem(KEY_STORAGE);
+      if (!key) {
+        key = window.prompt("Enter HELIOS dashboard API key (HELIOS_DASHBOARD_API_KEY):", "");
+        if (key) sessionStorage.setItem(KEY_STORAGE, key);
+      }
+      return key || "";
+    }
+
+    function clearApiKey() {
+      sessionStorage.removeItem(KEY_STORAGE);
+    }
+
+    function authHeaders() {
+      const key = getApiKey();
+      return key ? { "X-API-Key": key } : {};
+    }
+
+    function authedUrl(path) {
+      const key = getApiKey();
+      const u = new URL(path, location.origin);
+      if (key) u.searchParams.set("api_key", key);
+      return u.pathname + u.search;
+    }
+
+    const api = (path) => fetch(path, { headers: authHeaders() }).then(async r => {
+      if (r.status === 401) {
+        clearApiKey();
+        throw new Error("Unauthorized — check HELIOS_DASHBOARD_API_KEY");
+      }
+      if (!r.ok) throw new Error((await r.json()).detail || "Request failed");
+      return r.json();
+    });
     const scoreBadge = (score) => score >= 80 ? "g" : score >= 60 ? "y" : "r";
     const truncate = (v, n=10) => v.length > n ? `${v.slice(0, n)}...` : v;
     const loading = (msg="Loading...") => `<div class="panel">${msg}</div>`;
@@ -148,10 +182,10 @@
         }</tbody></table>`;
         document.getElementById("tab-export").innerHTML = `
           <div class="row">
-            <a href="/api/v1/reports/${runId}/json"><button>JSON</button></a>
-            <a href="/api/v1/reports/${runId}/pdf"><button>PDF</button></a>
-            <a href="/api/v1/reports/${runId}/rocrate"><button>RO-Crate</button></a>
-            <a href="/api/v1/reports/${runId}/ai-act"><button>AI Act</button></a>
+            <a href="${authedUrl(`/api/v1/reports/${runId}/json`)}"><button>JSON</button></a>
+            <a href="${authedUrl(`/api/v1/reports/${runId}/pdf`)}"><button>PDF</button></a>
+            <a href="${authedUrl(`/api/v1/reports/${runId}/rocrate`)}"><button>RO-Crate</button></a>
+            <a href="${authedUrl(`/api/v1/reports/${runId}/ai-act`)}"><button>AI Act</button></a>
           </div>`;
         document.querySelectorAll(".tabs button").forEach(btn=>btn.onclick = () => {
           document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));

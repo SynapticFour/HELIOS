@@ -29,16 +29,19 @@ HELIOS wraps pipeline execution, captures immutable run context, performs compli
 
 ## Install
 
-The package name is `helios-audit`. It is **not yet published on PyPI**. Install from source until a tagged release is published:
+The package name is `helios-audit`. **Until `v0.1.0` is tagged and published to PyPI, install from source.** After that release, `pip install helios-audit` works. See [`RELEASING.md`](RELEASING.md) for the operator tag steps (Trusted Publisher must be configured first).
 
 ```bash
-# editable install from a clone
+# editable install from a clone (current recommended path)
 git clone https://github.com/SynapticFour/HELIOS.git
 cd HELIOS
 pip install -e .
 
 # or one-shot from GitHub
 pip install "git+https://github.com/SynapticFour/HELIOS.git"
+
+# after v0.1.0 is on PyPI:
+# pip install helios-audit
 ```
 
 Development extras: `pip install -e ".[dev]"` (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
@@ -55,24 +58,29 @@ helios report --run-id <run-id> --format json
 
 ### Optional dashboard (Docker)
 
+The dashboard requires an API key (`HELIOS_DASHBOARD_API_KEY`). Unauthenticated `/api/v1/*` requests are rejected.
+
 ```bash
-make up        # http://localhost:8765
+export HELIOS_DASHBOARD_API_KEY=$(openssl rand -hex 32)   # or copy .env.example → .env
+make up        # http://localhost:8765/static/index.html
 make down
 make destroy
 ```
 
+CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-API-Key`, `Authorization: Bearer`, HTTP Basic password, or `?api_key=` (browser UI prompts and stores it in `sessionStorage`).
+
 ## Documentation
 
-See [`docs/index.md`](docs/index.md).
+See [`docs/index.md`](docs/index.md). Release process: [`RELEASING.md`](RELEASING.md).
 
 ## CI, Security, and Governance
 
 - Primary quality pipeline: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- PyPI publish on tag `v*`: [.github/workflows/release.yml](.github/workflows/release.yml) (see [`RELEASING.md`](RELEASING.md))
 - Security/compliance automation:
   - [.github/workflows/codeql.yml](.github/workflows/codeql.yml)
   - [.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml)
   - [.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml)
-  - [.github/workflows/dependabot-smoke.yml](.github/workflows/dependabot-smoke.yml)
 - **Dependency Review** requires the GitHub **Dependency graph** for this repository (repository owner: **Settings → Security → Code security and analysis → Dependency graph**).
 - Repo governance:
   - [`SECURITY.md`](SECURITY.md)

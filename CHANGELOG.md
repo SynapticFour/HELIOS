@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Dashboard API-key authentication (`HELIOS_DASHBOARD_API_KEY`); unauthenticated `/api/v1/*` rejected
+- `RELEASING.md` with `v0.1.0` cut steps and Trusted Publisher precondition
+- Release workflow metadata check for `helios-audit` name/version alignment
+
 ## [0.1.0] - 2025-Q2
 
 ### Added
@@ -18,4 +25,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Web dashboard with FastAPI backend and vanilla JS frontend
 - Docker support
 - Full test suite with >80% coverage
-
