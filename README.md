@@ -8,11 +8,13 @@
 |_| |_|_____|_____|___\___/|____/
 ```
 
+**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval.
+
 Genomics Pipeline Audit & Validation Framework for signed, reproducible compliance evidence.
 
-![PyPI](https://img.shields.io/pypi/v/helios-audit)
-![Python](https://img.shields.io/pypi/pyversions/helios-audit)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
+![Status](https://img.shields.io/badge/status-alpha-orange.svg)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 ![CI](https://img.shields.io/github/actions/workflow/status/SynapticFour/HELIOS/ci.yml?branch=main)
 
 ## Why HELIOS?
@@ -23,13 +25,23 @@ Clinical genomics labs need reproducible, machine-verifiable audit trails:
 - **GA4GH standards**: operational alignment with interoperable genomics ecosystems.
 - **EU AI Act**: technical documentation and data governance artifacts (Articles 10/11).
 
-HELIOS wraps pipeline execution, captures immutable run context, performs compliance checks, and exports signed reports.
+HELIOS wraps pipeline execution, captures immutable run context, performs compliance checks, and exports signed reports. Mappings to standards are engineering orientation, not a certificate that your lab is compliant.
 
 ## Install
 
+The package name is `helios-audit`. It is **not yet published on PyPI**. Install from source until a tagged release is published:
+
 ```bash
-pip install helios-audit
+# editable install from a clone
+git clone https://github.com/SynapticFour/HELIOS.git
+cd HELIOS
+pip install -e .
+
+# or one-shot from GitHub
+pip install "git+https://github.com/SynapticFour/HELIOS.git"
 ```
+
+Development extras: `pip install -e ".[dev]"` (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
 ## 5-minute Quickstart (Nextflow)
 
@@ -68,9 +80,9 @@ See [`docs/index.md`](docs/index.md).
   - [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
   - [`.github/pull_request_template.md`](.github/pull_request_template.md)
 
-## Compliance Coverage
+## Compliance Coverage (engineering orientation)
 
-| Standard | Coverage |
+| Standard | Coverage (technical controls / evidence — not certification) |
 |---|---|
 | ISO 15189:2022 | Validation traceability, software controls, reportability |
 | GA4GH | Reference integrity, transcript evidence, crypt4gh outputs |
@@ -102,6 +114,4 @@ Apache 2.0. See [`LICENSE`](LICENSE).
 
 ## Important Notice
 
-HELIOS provides technical quality and compliance evidence support. It is not, by
-itself, a certification decision, legal determination, or regulatory approval.
-
+HELIOS is alpha software. It provides technical quality and compliance evidence support. It is not, by itself, a certification decision, legal determination, or regulatory approval.

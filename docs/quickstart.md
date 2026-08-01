@@ -2,9 +2,17 @@
 
 ## 1) Install
 
+HELIOS is **alpha** and is **not yet on PyPI**. Install from source:
+
 ```bash
-pip install helios-audit
+git clone https://github.com/SynapticFour/HELIOS.git
+cd HELIOS
+pip install -e .
 ```
+
+Or: `pip install "git+https://github.com/SynapticFour/HELIOS.git"`
+
+HELIOS produces technical audit evidence; it is not a certification or legal determination.
 
 ## 2) Initialize config
 
@@ -29,4 +37,3 @@ helios run --pipeline nextflow --work-dir ./work --output-dir ./results
 ```bash
 helios report --run-id <run-id> --format json
 ```
-

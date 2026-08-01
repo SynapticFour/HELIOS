@@ -1,10 +1,10 @@
 # HELIOS Documentation
 
-HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow and Snakemake runs to generate signed, reproducible compliance evidence.
+**Status: Alpha.** HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow and Snakemake runs to generate signed, reproducible compliance evidence. Install from source (see [quickstart](quickstart.md)); the `helios-audit` name is reserved for a future PyPI release and is not published yet.
 
 - Start with the [quickstart](quickstart.md)
 - Review [architecture decisions](architecture.md)
-- Explore compliance mappings:
+- Explore compliance mappings (engineering orientation, not certification):
   - [ISO 15189:2022](compliance/iso15189.md)
   - [GA4GH](compliance/ga4gh.md)
   - [EU AI Act](compliance/ai_act.md)
@@ -22,6 +22,4 @@ HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow a
 
 ## Notice
 
-HELIOS documentation describes technical controls and generated evidence. It does
-not constitute legal advice or a formal certification by itself.
-
+HELIOS is alpha software. Documentation describes technical controls and generated evidence. It does not constitute legal advice or a formal certification by itself.
