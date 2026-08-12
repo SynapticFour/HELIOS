@@ -4,6 +4,7 @@
 
 - Start with the [quickstart](quickstart.md)
 - Review [architecture decisions](architecture.md)
+- **Threat model:** [THREAT_MODEL.md](THREAT_MODEL.md) · **Incident response:** [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)
 - Explore compliance mappings (engineering orientation, not certification):
   - [ISO 15189:2022](compliance/iso15189.md)
   - [GA4GH](compliance/ga4gh.md)
