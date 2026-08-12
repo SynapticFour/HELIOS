@@ -1,6 +1,6 @@
 # HELIOS — Synaptic Four unified local lifecycle
 
-.PHONY: help install up down destroy dashboard logs
+.PHONY: help install up down destroy dashboard logs solum-clinical-evidence
 
 help:
 	@echo "HELIOS — local lifecycle"
@@ -9,9 +9,12 @@ help:
 	@echo "  make up          Start optional audit dashboard (Docker; needs API key)"
 	@echo "  make down        Stop dashboard; keep volumes"
 	@echo "  make destroy     Stop dashboard; remove volumes"
+	@echo "  make solum-clinical-evidence EXPORT=path.json"
+	@echo "                   Ingest Solum audit chain → CLIN-ACCESS-001 signed report"
 	@echo ""
 	@echo "Dashboard auth: export HELIOS_DASHBOARD_API_KEY=\$$(openssl rand -hex 32)"
 	@echo "CLI-only (no Docker): helios init && helios run --pipeline nextflow ..."
+	@echo "Solum: see docs/solum-ingest.md"
 
 install:
 	pip install -e .
@@ -38,3 +41,11 @@ destroy:
 
 logs:
 	docker compose logs -f
+
+# Usage: make solum-clinical-evidence EXPORT=/path/to/pilot.solum-audit-helios-chain.json
+solum-clinical-evidence:
+	@if [ -z "$(EXPORT)" ]; then \
+		echo "Usage: make solum-clinical-evidence EXPORT=/path/to/solum-audit-helios-chain.json"; \
+		exit 1; \
+	fi
+	helios solum-audit --export "$(EXPORT)" $(if $(CONFIG),--config "$(CONFIG)",)

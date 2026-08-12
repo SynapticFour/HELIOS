@@ -158,6 +158,74 @@ def run(
     )
 
 
+@app.command("solum-audit")
+def solum_audit(
+    export: Annotated[
+        Path,
+        typer.Option("--export", "-e", help="Path to solum-audit-helios-chain-v1 JSON"),
+    ],
+    config: Annotated[Path | None, typer.Option("--config", "-c")] = None,
+    no_sign: Annotated[bool, typer.Option("--no-sign")] = False,
+    export_format: Annotated[str, typer.Option("--export-format")] = "json",
+) -> None:
+    """Ingest a Solum clinical audit export, run CLIN-ACCESS-001, sign, and export."""
+    if not export.is_file():
+        raise typer.BadParameter(f"export not found: {export}")
+    if config:
+        config_path = str(config)
+    elif Path("helios.toml").exists():
+        config_path = "helios.toml"
+    else:
+        config_path = None
+    settings = load_config(config_path)
+    logging.basicConfig(level=settings.log_level.upper())
+    storage = AuditStorage(f"sqlite:///{settings.audit_db}")
+    start_time = datetime.now(UTC)
+
+    context = RunContext(
+        pipeline_name="solum-clinical-audit",
+        executor="unknown",
+        work_dir=export.parent,
+        output_dir=export.parent,
+        parameters={"solum_audit_export": str(export.resolve())},
+        artifacts=[export.resolve()],
+    )
+    registry = CheckRegistry()
+    enabled_ids = ["CLIN-ACCESS-001"]
+    checks = registry.run_all(context, enabled=enabled_ids)
+    digest = sha256_file(export)
+    record = AuditRecord(
+        pipeline_name=context.pipeline_name,
+        executor=context.executor,
+        start_time=start_time,
+        end_time=datetime.now(UTC),
+        input_files=[FileHash(path=str(export), sha256=digest, size_bytes=export.stat().st_size)],
+        output_files=[],
+        containers=[],
+        parameters=context.parameters,
+        checks=checks,
+    )
+    if not no_sign and settings.signing_key.exists():
+        record = sign_record(record, settings.signing_key)
+    storage.save_record(record)
+
+    report_path = _export_record(record, export_format, settings.export.output_dir)
+    score = registry.compute_score(record.checks)
+    clin = next((c for c in checks if c.check_id == "CLIN-ACCESS-001"), None)
+    console.print(
+        Panel(
+            f"Report: {report_path}\n"
+            f"CLIN-ACCESS-001: {clin.status if clin else 'missing'} — "
+            f"{clin.message if clin else ''}\n"
+            f"Score={score.score} grade={score.grade}",
+            title="Solum clinical evidence",
+            border_style="green" if score.failed == 0 else "red",
+        )
+    )
+    if clin is not None and clin.status == "fail":
+        raise typer.Exit(code=1)
+
+
 @app.command()
 def validate(run_id: UUID) -> None:
     """Re-run checks against stored run artifact context."""

@@ -71,7 +71,7 @@ CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-
 
 ## Documentation
 
-See [`docs/index.md`](docs/index.md). Release process: [`RELEASING.md`](RELEASING.md).
+See [`docs/index.md`](docs/index.md). Solum clinical ingest: [`docs/solum-ingest.md`](docs/solum-ingest.md) (`helios solum-audit` / `make solum-clinical-evidence`). Release process: [`RELEASING.md`](RELEASING.md).
 
 ## CI, Security, and Governance
 

@@ -3,6 +3,7 @@
 **Status: Alpha.** HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow and Snakemake runs to generate signed, reproducible compliance evidence. Install from source until `v0.1.0` is tagged and published (see [quickstart](quickstart.md) and [RELEASING.md](../RELEASING.md)). HELIOS is **not** a certification or regulatory approval.
 
 - Start with the [quickstart](quickstart.md)
+- **Solum clinical ingest:** [solum-ingest.md](solum-ingest.md) (`helios solum-audit`, CLIN-ACCESS-001)
 - Review [architecture decisions](architecture.md)
 - **Threat model:** [THREAT_MODEL.md](THREAT_MODEL.md) · **Incident response:** [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)
 - Explore compliance mappings (engineering orientation, not certification):
