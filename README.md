@@ -8,7 +8,7 @@
 |_| |_|_____|_____|___\___/|____/
 ```
 
-**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval.
+**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval. Alpha→Beta exit: [`docs/ALPHA-TO-BETA.md`](docs/ALPHA-TO-BETA.md).
 
 Genomics Pipeline Audit & Validation Framework for signed, reproducible compliance evidence.
 
