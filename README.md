@@ -8,7 +8,7 @@
 |_| |_|_____|_____|___\___/|____/
 ```
 
-**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval.
+**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval. Alpha→Beta exit: [`docs/ALPHA-TO-BETA.md`](docs/ALPHA-TO-BETA.md).
 
 Genomics Pipeline Audit & Validation Framework for signed, reproducible compliance evidence.
 
@@ -71,7 +71,7 @@ CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-
 
 ## Documentation
 
-See [`docs/index.md`](docs/index.md). Release process: [`RELEASING.md`](RELEASING.md).
+See [`docs/index.md`](docs/index.md). Solum clinical ingest: [`docs/solum-ingest.md`](docs/solum-ingest.md) (`helios solum-audit` / `make solum-clinical-evidence`). Release process: [`RELEASING.md`](RELEASING.md).
 
 ## CI, Security, and Governance
 
