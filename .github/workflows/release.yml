@@ -84,7 +84,7 @@ jobs:
           pathlib.Path("helios-lockfile-attestation.json").write_text(json.dumps(payload, indent=2) + "\n")
           PY
       - name: Upload SBOM artifacts to workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: helios-sbom
           path: |
