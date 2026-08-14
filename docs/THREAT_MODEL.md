@@ -3,7 +3,7 @@
 **Status:** Living · Alpha product
 **Version:** 1.0 · 2026-08-12
 **Audience:** Security reviewers, lab quality / IT
-**Related:** [README.md](../README.md) · [architecture.md](architecture.md) · [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) (when present)
+**Related:** [README.md](../README.md) · [architecture.md](architecture.md) · [operator.md](operator.md) · [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)
 
 HELIOS produces **technical audit evidence** for genomics pipelines. It is **not** certification, accreditation, legal determination, or regulatory approval.
 
@@ -15,7 +15,7 @@ HELIOS produces **technical audit evidence** for genomics pipelines. It is **not
 |-------|-------------|-------|
 | Pipeline run context (inputs, digests, versions) | Medium–High | May include paths or sample IDs |
 | Check results / evidence reports | High | Integrity is the product value |
-| Signing keys for reports | Critical | Compromise → forged “evidence” |
+| Signing keys for reports | Critical | Compromise → forged evidence. Encrypt with HELIOS_KEY_PASSPHRASE. Verify against trust store only. |
 | Ingested Solum audit exports | High | Clinical access trails |
 | Operator config / CI secrets | High | |
 
@@ -46,7 +46,7 @@ HELIOS typically runs **inside the operator’s trust domain**. Synaptic Four do
 | Adversary | Goal | Posture |
 |-----------|------|---------|
 | Report forger | Fake pass evidence | Signing keys; document verification steps |
-| Tamper with inputs after the fact | Change what was checked | Capture immutable run context at check time |
+| Tamper with inputs after the fact | Change what was checked | Hash inputs at check time; sign the record; verify against trust store |
 | Malicious dependency in HELIOS install | RCE on operator host | Pin releases; SBOM/attestation (level-up C6) |
 | Confused deputy (CI) | Leak secrets into reports | Redact; avoid dumping env |
 
@@ -65,7 +65,7 @@ HELIOS typically runs **inside the operator’s trust domain**. Synaptic Four do
 
 | STRIDE | Mitigations | Residual |
 |--------|-------------|----------|
-| Spoofing | Signed reports when keys configured | Unsigned Alpha demos |
+| Spoofing | Signed reports verified against trusted_keys_dir | Unsigned only with --no-sign / allow_unsigned |
 | Tampering | Digests of inputs; signed output | Weak if signing skipped |
 | Repudiation | Report metadata + timestamps | Operator clock trust |
 | Info disclosure | Minimize PII in reports | Sample IDs in paths |

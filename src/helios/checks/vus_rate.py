@@ -37,26 +37,52 @@ class VUSRateCheck(BaseCheck):
         if total_classified == 0:
             return CheckResult(
                 check_id=self.check_id,
-                status="pass",
+                status="skip",
                 message="No classified variants available for VUS reporting metric.",
                 evidence={
                     "total_classified": 0,
                     "vus_count": 0,
-                    "vus_percentage": 0.0,
+                    "vus_percentage": None,
                     "histogram": {},
                 },
             )
         rate = vus_count / total_classified
+        checks = self.settings.checks if self.settings is not None else None
+        warn_threshold = checks.vus_warn_threshold if checks else 0.40
+        fail_threshold = checks.vus_fail_threshold if checks else 0.70
+        evidence = {
+            "total_classified": total_classified,
+            "vus_count": vus_count,
+            "vus_percentage": round(rate * 100, 3),
+            "histogram": dict(distribution),
+            "warn_threshold": warn_threshold,
+            "fail_threshold": fail_threshold,
+        }
+        if rate >= fail_threshold:
+            return CheckResult(
+                check_id=self.check_id,
+                status="fail",
+                message=(
+                    f"VUS rate is {rate:.2%} ({vus_count}/{total_classified}), "
+                    "above fail threshold."
+                ),
+                evidence=evidence,
+            )
+        if rate >= warn_threshold:
+            return CheckResult(
+                check_id=self.check_id,
+                status="warn",
+                message=(
+                    f"VUS rate is {rate:.2%} ({vus_count}/{total_classified}), "
+                    "above warn threshold."
+                ),
+                evidence=evidence,
+            )
         return CheckResult(
             check_id=self.check_id,
             status="pass",
             message=f"VUS rate is {rate:.2%} ({vus_count}/{total_classified}).",
-            evidence={
-                "total_classified": total_classified,
-                "vus_count": vus_count,
-                "vus_percentage": round(rate * 100, 3),
-                "histogram": dict(distribution),
-            },
+            evidence=evidence,
         )
 
     def _classify_variant(self, info: str) -> str | None:

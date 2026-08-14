@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
@@ -12,22 +11,27 @@ from helios.checks import get_check_registry
 from helios.config import HeliosSettings
 from helios.core.audit_record import AuditRecord
 from helios.core.storage import AuditStorage
+from helios.dashboard.deps import get_settings, get_storage
 from helios.dashboard.models import DeleteResponse, RunImportResponse, RunListItem
 
 router = APIRouter(prefix="/api/v1/runs", tags=["runs"])
 
-
-def _get_storage(request: Request) -> AuditStorage:
-    return cast(AuditStorage, request.app.state.storage)
-
-
-def _get_settings(request: Request) -> HeliosSettings:
-    return cast(HeliosSettings, request.app.state.settings)
-
-
-STORAGE_DEP = Depends(_get_storage)
-SETTINGS_DEP = Depends(_get_settings)
+STORAGE_DEP = Depends(get_storage)
+SETTINGS_DEP = Depends(get_settings)
 IMPORT_FILE = File(...)
+
+
+def _item_for_record(record: AuditRecord) -> RunListItem:
+    registry = get_check_registry()
+    computed = registry.compute_score(record.checks)
+    return RunListItem(
+        run_id=str(record.run_id),
+        pipeline_name=record.pipeline_name,
+        executor=record.executor,
+        start_time=record.start_time.isoformat(),
+        score=computed.score,
+        status=_status_for_record(record),
+    )
 
 
 @router.get("")
@@ -42,35 +46,46 @@ def list_runs(
     min_score: int | None = Query(None, ge=0, le=100),
 ) -> list[RunListItem]:
     """List runs with pagination and optional filters."""
-    storage = _get_storage(request)
+    storage = get_storage(request)
     start = datetime.fromisoformat(start_date) if start_date else None
     end = datetime.fromisoformat(end_date) if end_date else None
-    records = storage.list_records(
-        limit=10_000,
-        offset=0,
-        pipeline_filter=pipeline,
-        start_time=start,
-        end_time=end,
-    )
-    if status:
-        records = [record for record in records if _status_for_record(record) == status]
-    registry = get_check_registry()
-    payload: list[RunListItem] = []
-    for record in records:
-        score = registry.compute_score(record.checks).score
-        payload.append(
-            RunListItem(
-                run_id=str(record.run_id),
-                pipeline_name=record.pipeline_name,
-                executor=record.executor,
-                start_time=record.start_time.isoformat(),
-                score=score,
-                status=_status_for_record(record),
-            )
+    if status is None and min_score is None:
+        records = storage.list_records(
+            limit=limit,
+            offset=offset,
+            pipeline_filter=pipeline,
+            start_time=start,
+            end_time=end,
         )
-    if min_score is not None:
-        payload = [item for item in payload if item.score >= min_score]
-    return payload[offset : offset + limit]
+        return [_item_for_record(record) for record in records]
+
+    matched: list[RunListItem] = []
+    scanned = 0
+    page_size = 200
+    page_offset = 0
+    max_scan = 50_000
+    while scanned < max_scan:
+        batch = storage.list_records(
+            limit=page_size,
+            offset=page_offset,
+            pipeline_filter=pipeline,
+            start_time=start,
+            end_time=end,
+        )
+        if not batch:
+            break
+        scanned += len(batch)
+        page_offset += len(batch)
+        for record in batch:
+            item = _item_for_record(record)
+            if status and item.status != status:
+                continue
+            if min_score is not None and (item.score is None or item.score < min_score):
+                continue
+            matched.append(item)
+        if len(matched) >= offset + limit:
+            break
+    return matched[offset : offset + limit]
 
 
 @router.get("/{run_id}")
@@ -95,13 +110,21 @@ def get_run_score(run_id: UUID, storage: AuditStorage = STORAGE_DEP) -> dict[str
 async def import_run(
     file: UploadFile = IMPORT_FILE,
     storage: AuditStorage = STORAGE_DEP,
+    settings: HeliosSettings = SETTINGS_DEP,
     allow_unsigned: bool = Query(False),
 ) -> RunImportResponse:
     """Import an AuditRecord JSON file.
 
-    Signed records must verify. Unsigned records require ``allow_unsigned=true``.
+    Signed records must verify against the operator trust store. Unsigned
+    records require ``allow_unsigned=true``.
     """
-    raw = await file.read()
+    max_bytes = settings.dashboard.max_import_bytes
+    raw = await file.read(max_bytes + 1)
+    if len(raw) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Import exceeds max_import_bytes ({max_bytes}).",
+        )
     record = AuditRecord.model_validate_json(raw)
     if record.signature is None:
         if not allow_unsigned:
@@ -109,8 +132,11 @@ async def import_run(
                 status_code=400,
                 detail="Unsigned audit records require allow_unsigned=true.",
             )
-    elif not record.verify_signature():
-        raise HTTPException(status_code=400, detail="Audit record signature is invalid")
+    elif not record.verify_signature(trusted_keys_dir=settings.trusted_keys_dir):
+        raise HTTPException(
+            status_code=400,
+            detail="Audit record signature is invalid or the signer is not trusted.",
+        )
     try:
         storage.save_record(record)
     except ValueError as exc:

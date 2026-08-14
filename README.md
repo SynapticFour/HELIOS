@@ -25,7 +25,7 @@ Clinical genomics labs need reproducible, machine-verifiable audit trails:
 - **GA4GH standards**: operational alignment with interoperable genomics ecosystems.
 - **EU AI Act**: technical documentation and data governance artifacts (Articles 10/11).
 
-HELIOS wraps pipeline execution, captures immutable run context, performs compliance checks, and exports signed reports. Mappings to standards are engineering orientation, not a certificate that your lab is compliant.
+HELIOS wraps pipeline execution, records run context, runs fail-closed compliance checks, and exports reports signed against an operator trust store. SQLite storage is mutable; integrity is the Ed25519 signature verified against `*.pub` keys you installed — not a PEM embedded in the JSON. Mappings to standards are engineering orientation, not a certificate that your lab is compliant.
 
 ## Install
 
@@ -50,6 +50,7 @@ Development extras: `pip install -e ".[dev]"` (see [`CONTRIBUTING.md`](CONTRIBUT
 
 ```bash
 helios init
+export HELIOS_KEY_PASSPHRASE='use a real secret'
 helios key generate
 helios run --pipeline nextflow --work-dir ./work --output-dir ./results
 helios status
@@ -62,16 +63,18 @@ The dashboard requires an API key (`HELIOS_DASHBOARD_API_KEY`). Unauthenticated 
 
 ```bash
 export HELIOS_DASHBOARD_API_KEY=$(openssl rand -hex 32)   # or copy .env.example → .env
-make up        # http://localhost:8765/static/index.html
+make up        # http://127.0.0.1:8765/static/index.html
 make down
 make destroy
 ```
 
-CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-API-Key`, `Authorization: Bearer`, or HTTP Basic password (browser UI prompts and stores it in `sessionStorage`).
+CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-API-Key`, `Authorization: Bearer`, or HTTP Basic password. The browser UI prompts for the key and keeps it **in memory only**.
+
+`helios run` and `helios validate` exit **1** if any enabled check fails or a signature is untrusted. Failed wrapped pipelines are not signed. Operator details: [`docs/operator.md`](docs/operator.md).
 
 ## Documentation
 
-See [`docs/index.md`](docs/index.md). Solum clinical ingest: [`docs/solum-ingest.md`](docs/solum-ingest.md) (`helios solum-audit` / `make solum-clinical-evidence`). Release process: [`RELEASING.md`](RELEASING.md).
+See [`docs/index.md`](docs/index.md). Operator reference (config, env, exit codes, trust store): [`docs/operator.md`](docs/operator.md). Solum clinical ingest: [`docs/solum-ingest.md`](docs/solum-ingest.md) (`helios solum-audit` / `make solum-clinical-evidence`). Release process: [`RELEASING.md`](RELEASING.md).
 
 ## CI, Security, and Governance
 
@@ -99,18 +102,20 @@ See [`docs/index.md`](docs/index.md). Solum clinical ingest: [`docs/solum-ingest
 ## Architecture
 
 ```text
-CLI (Typer)
+CLI (Typer) — fail-closed exit codes
    |
    +-- Integrations (Nextflow / Snakemake)
    |
-   +-- Checks (reference, container pinning, MANE, VUS, crypt4gh)
+   +-- Checks (reference, container pinning, MANE, VUS, crypt4gh, clinical access)
    |
-   +-- Core (audit model, signer, hasher, storage)
+   +-- Core (audit model, trust-store signer, hasher, SQLite)
    |
    +-- Export (JSON / PDF / RO-Crate)
    |
-   +-- Dashboard API (FastAPI)
+   +-- Dashboard API (FastAPI, 127.0.0.1, in-memory API key)
 ```
+
+Local quality gate: `make test` (ruff + mypy + pytest `--cov-fail-under=80`).
 
 ## Contributing
 

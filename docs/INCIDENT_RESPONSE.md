@@ -39,8 +39,10 @@
 
 ## 4. Recovery
 
-- Generate new signing keys; store in operator secret manager
-- Re-run checks on retained inputs; re-sign with new keys
+- Generate new signing keys (`HELIOS_KEY_PASSPHRASE` required unless `--allow-unencrypted`); store the private key in the operator secret manager
+- Install the new `helios.pub` into `trusted_keys_dir` on every host that verifies reports; remove the compromised `.pub`
+- Re-run checks on retained inputs; re-sign with new keys (`helios run` / `helios solum-audit`)
+- Tell relying parties which fingerprints are retired and which `.pub` to install
 - Update pin in Showcase / pilot docs
 - Do **not** claim certificates — re-issue engineering evidence only
 

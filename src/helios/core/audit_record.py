@@ -5,10 +5,13 @@ from __future__ import annotations
 import base64
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from helios.core.signature import AuditSignature, verify_signature_bytes
 
 
 class FileHash(BaseModel):
@@ -43,18 +46,10 @@ class ReferenceGenomeInfo(BaseModel):
 
     assembly: str
     source_url: str
-    sha256: str
-
-
-class AuditSignature(BaseModel):
-    """Signature envelope over canonical audit record payload."""
-
-    algorithm: Literal["Ed25519"]
-    public_key_fingerprint: str
-    signature_b64: str
-    signed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    # Embedded SPKI PEM so third parties can verify without a local keystore.
-    public_key_pem: str | None = None
+    # Only filled when a real SHA-256 of the reference FASTA is known.
+    sha256: str = ""
+    # Contig MD5 values copied from BAM/CRAM @SQ M5 fields (SAM spec), not SHA-256.
+    contig_md5: dict[str, str] = Field(default_factory=dict)
 
 
 class AuditRecord(BaseModel):
@@ -75,7 +70,9 @@ class AuditRecord(BaseModel):
     checks: list[CheckResult] = Field(default_factory=list)
     reference_genome: ReferenceGenomeInfo | None = None
     signature: AuditSignature | None = None
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
+    work_dir: str | None = None
+    output_dir: str | None = None
 
     def canonical_json(self) -> str:
         """Return canonical JSON payload used for signing."""
@@ -87,16 +84,14 @@ class AuditRecord(BaseModel):
         """Serialize the full record as indented JSON."""
         return self.model_dump_json(indent=2)
 
-    def verify_signature(self) -> bool:
-        """Verify attached signature against the canonical payload."""
+    def verify_signature(self, trusted_keys_dir: Path | None = None) -> bool:
+        """Verify attached signature against the operator trust store."""
         if self.signature is None:
             return False
-        from helios.core.signer import verify_signature_bytes
-
         signature = base64.b64decode(self.signature.signature_b64.encode("utf-8"))
         return verify_signature_bytes(
             fingerprint=self.signature.public_key_fingerprint,
             payload=self.canonical_json().encode("utf-8"),
             signature=signature,
-            public_key_pem=self.signature.public_key_pem,
+            trusted_keys_dir=trusted_keys_dir,
         )

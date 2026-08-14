@@ -10,7 +10,7 @@ from pathlib import Path
 
 from helios.core.audit_record import ContainerRecord
 from helios.core.run_context import RunContext
-from helios.integrations.containers import split_container
+from helios.integrations.containers import format_container_ref, split_container
 
 TRACE_COLUMNS = [
     "task_id",
@@ -195,6 +195,8 @@ class NextflowRunParser:
         parsed_config = self.parse_config()
         process_records = self.parse_trace()
         artifacts = [path for path in self.output_dir.rglob("*") if path.is_file()]
+        containers = self.get_containers()
+        refs = [format_container_ref(item.name, item.tag, item.digest) for item in containers]
         return RunContext(
             pipeline_name=parsed_config.name,
             executor="nextflow",
@@ -203,12 +205,14 @@ class NextflowRunParser:
             artifacts=artifacts,
             parameters=self.load_parameters(),
             project_dir=self.launch_dir,
+            container_refs=refs,
             metadata={
                 "pipeline_version": parsed_config.version,
                 "manifest_author": parsed_config.manifest_author,
                 "nextflow_version": parsed_config.nextflow_version,
                 "process_count": str(len(process_records)),
                 "parser_warnings": "; ".join(self.warnings) if self.warnings else "",
+                "trace_found": "true" if self.trace_file.exists() else "false",
             },
         )
 
@@ -293,6 +297,7 @@ def build_context(work_dir: Path, output_dir: Path, pipeline_name: str) -> RunCo
         artifacts=context.artifacts,
         metadata=context.metadata,
         project_dir=context.project_dir,
+        container_refs=context.container_refs,
     )
 
 

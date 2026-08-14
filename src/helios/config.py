@@ -27,7 +27,9 @@ class ChecksConfig(BaseModel):
     reference_genome_required: str = "GRCh38"
     mane_pass_threshold: float = 0.90
     mane_warn_threshold: float = 0.50
-    container_digest_required: bool = False
+    container_digest_required: bool = True
+    vus_warn_threshold: float = 0.40
+    vus_fail_threshold: float = 0.70
 
 
 class ExportConfig(BaseModel):
@@ -49,6 +51,7 @@ class DashboardConfig(BaseModel):
     api_key: str | None = None
     # Deletion is off by default; audit rows are append-only unless explicitly enabled.
     allow_delete: bool = False
+    max_import_bytes: int = 10 * 1024 * 1024
 
 
 class HeliosTomlSource(TomlConfigSettingsSource):
@@ -73,9 +76,11 @@ class HeliosSettings(BaseSettings):
     )
 
     signing_key: Path = Path("~/.helios/keys/helios.key")
+    trusted_keys_dir: Path = Path("~/.helios/keys")
     audit_db: Path = Path("~/.helios/helios.db")
     cache_dir: Path = Path("~/.helios/cache")
     log_level: str = "INFO"
+    command_timeout_seconds: int = 86_400
     checks: ChecksConfig = Field(default_factory=ChecksConfig)
     export: ExportConfig = Field(default_factory=ExportConfig)
     dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
@@ -85,6 +90,7 @@ class HeliosSettings(BaseSettings):
     def model_post_init(self, __context: object) -> None:
         """Expand home references for configured path settings."""
         object.__setattr__(self, "signing_key", self.signing_key.expanduser())
+        object.__setattr__(self, "trusted_keys_dir", self.trusted_keys_dir.expanduser())
         object.__setattr__(self, "audit_db", self.audit_db.expanduser())
         object.__setattr__(self, "cache_dir", self.cache_dir.expanduser())
         export_value = self.export.model_copy(
@@ -112,6 +118,15 @@ class HeliosSettings(BaseSettings):
             )
         return key
 
+    def redacted_dump(self) -> dict[str, Any]:
+        """JSON-ready settings with secrets replaced."""
+        payload = self.model_dump(mode="json")
+        _redact_secret(payload, "dashboard_api_key")
+        dashboard = payload.get("dashboard")
+        if isinstance(dashboard, dict):
+            _redact_secret(dashboard, "api_key")
+        return payload
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -129,6 +144,12 @@ class HeliosSettings(BaseSettings):
             HeliosTomlSource(settings_cls),
             file_secret_settings,
         )
+
+
+def _redact_secret(mapping: dict[str, Any], key: str) -> None:
+    value = mapping.get(key)
+    if isinstance(value, str) and value:
+        mapping[key] = "***"
 
 
 def load_config(path: str | None = None) -> HeliosSettings:

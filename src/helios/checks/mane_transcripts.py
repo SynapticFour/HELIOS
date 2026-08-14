@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -156,8 +157,21 @@ class MANETranscriptCheck(BaseCheck):
                 )
             filename = match.group(0)
             content = client.get(f"{MANE_BASE_URL}{filename}").content
+            sidecar = client.get(f"{MANE_BASE_URL}{filename}.md5")
+        if not content.startswith(b"\x1f\x8b"):
+            raise RuntimeError(f"MANE download {filename} is not gzip-compressed.")
+        digest = hashlib.sha256(content).hexdigest()
+        if sidecar.status_code == 200:
+            listed = sidecar.text.split()[0].strip().lower()
+            md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+            if listed and listed != md5:
+                raise RuntimeError(
+                    f"MANE download {filename} failed MD5 sidecar check "
+                    f"(got {md5}, listed {listed})."
+                )
         path = self.cache_dir / filename
         path.write_bytes(content)
+        (path.with_suffix(path.suffix + ".sha256")).write_text(digest + "\n", encoding="utf-8")
         return path
 
     def _parse_mane_file(self, path: Path) -> set[str]:

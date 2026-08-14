@@ -12,6 +12,10 @@ from helios.core.signer import sign_record
 from helios.core.storage import AuditStorage
 
 
+class SigningRequiredError(FileNotFoundError):
+    """Raised when a signed persist is requested but the private key is missing."""
+
+
 def hash_files(paths: Iterable[Path]) -> list[FileHash]:
     """Hash existing files; skip missing or non-file paths."""
     output: list[FileHash] = []
@@ -37,8 +41,18 @@ def reference_genome_from_checks(checks: list[CheckResult]) -> ReferenceGenomeIn
         evidence = check.evidence
         assembly = str(evidence.get("assembly") or evidence.get("required_assembly") or "GRCh38")
         source = str(evidence.get("header_source_match") or evidence.get("artifact") or "")
-        digest = str(evidence.get("known_md5_chr1") or "")
-        return ReferenceGenomeInfo(assembly=assembly, source_url=source, sha256=digest)
+        contig_md5 = {
+            key.removeprefix("measured_md5_"): str(value)
+            for key, value in evidence.items()
+            if key.startswith("measured_md5_") and value
+        }
+        fasta_sha256 = str(evidence.get("fasta_sha256") or "")
+        return ReferenceGenomeInfo(
+            assembly=assembly,
+            source_url=source,
+            sha256=fasta_sha256,
+            contig_md5=contig_md5,
+        )
     return None
 
 
@@ -48,13 +62,22 @@ def persist_record(
     *,
     sign: bool = True,
 ) -> AuditRecord:
-    """Attach derived fields, optionally sign, then persist."""
+    """Attach derived fields, sign when requested, then persist.
+
+    Signing is required unless ``sign=False``. A missing key is an error, not a
+    silent unsigned store.
+    """
     stored = record
     if stored.reference_genome is None:
         info = reference_genome_from_checks(stored.checks)
         if info is not None:
             stored = stored.model_copy(update={"reference_genome": info})
-    if sign and settings.signing_key.exists():
+    if sign:
+        if not settings.signing_key.exists():
+            raise SigningRequiredError(
+                f"Signing key not found at {settings.signing_key}. "
+                "Run `helios key generate` or pass --no-sign."
+            )
         stored = sign_record(stored, settings.signing_key)
     storage = AuditStorage(f"sqlite:///{settings.audit_db}")
     storage.save_record(stored)

@@ -24,16 +24,16 @@ def vcf_artifacts(context: RunContext) -> list[Path]:
 def iter_info_fields(path: Path) -> Iterator[str]:
     """Yield INFO column strings, streaming gzip/bgzip or plain text.
 
-    pysam is used for BAM/CRAM headers elsewhere. Annotation checks need
-    undeclared INFO tags (ANN/CSQ/CLNSIG) that VariantFile drops without a
-    matching header, so this path streams the INFO column directly.
+    Decode errors fail the check (caught by the registry) instead of silently
+    replacing bytes. pysam VariantFile is not used because undeclared INFO
+    tags (ANN/CSQ/CLNSIG) are dropped without a matching header.
     """
     name = path.name.lower()
     if name.endswith(".gz") or name.endswith(".bgz"):
-        with gzip.open(path, "rt", encoding="utf-8", errors="replace") as handle:
+        with gzip.open(path, "rt", encoding="utf-8", errors="strict") as handle:
             yield from _info_lines(handle)
         return
-    with path.open("r", encoding="utf-8", errors="replace") as handle:
+    with path.open("r", encoding="utf-8", errors="strict") as handle:
         yield from _info_lines(handle)
 
 

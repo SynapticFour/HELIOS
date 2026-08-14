@@ -113,27 +113,33 @@ def export_rocrate(record: AuditRecord, output_dir: Path) -> Path:
     return out
 
 
+STANDARD_IRIS: dict[str, str] = {
+    "ISO15189:2022-5.3": "https://www.iso.org/standard/76677.html",
+    "ISO15189:2022-5.6": "https://www.iso.org/standard/76677.html",
+    "ISO15189:2022-7.3.2": "https://www.iso.org/standard/76677.html",
+    "GA4GH-TRS-2.0": "https://www.ga4gh.org/product/tool-registry-service-trs/",
+    "GA4GH-VRS-1.3": "https://www.ga4gh.org/product/variant-representation-specification-vrs/",
+    "GA4GH-Crypt4GH-1.0": "https://www.ga4gh.org/product/crypt4gh/",
+    "GA4GH-DRS-1.3": "https://www.ga4gh.org/product/data-repository-service-drs/",
+    "GA4GH-GKS-1.0": "https://www.ga4gh.org/product/gks/",
+    "ACMG-2015": "https://www.acmg.net/",
+    "ACMG-2023-reporting": "https://www.acmg.net/",
+    "ISO27001:A.8.15": "https://www.iso.org/standard/27001",
+    "EHDS-access-evidence": "https://health.ec.europa.eu/ehealth-digital-health-and-care/european-health-data-space_en",
+}
+
+
 def record_check_standard_map(check_id: str, record: AuditRecord) -> list[str]:
-    """Map check standards to schema.org/bioschemas style identifiers."""
+    """Map check standards to canonical public identifiers (not invented URLs)."""
     registry = get_check_registry()
     check_class = registry.get_registered_checks().get(check_id)
     if check_class is not None:
-        mapped: list[str] = []
-        for standard in check_class.standards:
-            normalized = standard.lower()
-            if "ga4gh" in normalized:
-                mapped.append(f"https://schema.org/{standard}")
-            elif "iso15189" in normalized or "iso 15189" in normalized:
-                mapped.append(f"https://bioschemas.org/{standard}")
-            elif "acmg" in normalized:
-                mapped.append(f"https://schema.org/{standard}")
-        if mapped:
-            return mapped
+        return [STANDARD_IRIS.get(standard, standard) for standard in check_class.standards]
     for check in record.checks:
         if check.check_id != check_id:
             continue
         mapping = []
         for standard in check.evidence.get("standards", []):
-            mapping.append(f"https://bioschemas.org/{standard}")
-        return mapping or ["https://schema.org/PropertyValue"]
-    return ["https://schema.org/PropertyValue"]
+            mapping.append(STANDARD_IRIS.get(str(standard), str(standard)))
+        return mapping or ["PropertyValue"]
+    return ["PropertyValue"]

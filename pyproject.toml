@@ -46,7 +46,6 @@ dev = [
   "pytest-cov>=5.0",
   "ruff>=0.4",
   "mypy>=1.10",
-  "hypothesis>=6.100",
   "weasyprint>=62.0",
 ]
 
@@ -64,7 +63,7 @@ packages = ["src/helios"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --cov=helios.core --cov=helios.checks --cov-report=term-missing"
+addopts = "-q --cov=helios --cov-report=term-missing --cov-fail-under=80"
 
 [tool.ruff]
 line-length = 100

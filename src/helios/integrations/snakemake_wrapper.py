@@ -14,11 +14,21 @@ from helios.integrations.snakemake import SnakemakeRunParser
 
 
 def run_wrapped_snakemake(command: list[str], work_dir: Path, output_dir: Path) -> int:
-    """Execute Snakemake command and persist a HELIOS audit record."""
-    process = subprocess.run(command, cwd=work_dir)
+    """Execute Snakemake command and persist a HELIOS audit record on success."""
+    settings = load_config()
+    try:
+        process = subprocess.run(
+            command,
+            cwd=work_dir,
+            timeout=settings.command_timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return 124
+    if process.returncode != 0:
+        return process.returncode
     parser = SnakemakeRunParser(snakemake_dir=work_dir, output_dir=output_dir)
     context = parser.build_run_context()
-    settings = load_config()
     registry = CheckRegistry()
     enabled = registry.resolve_enabled(settings.checks.enabled)
     checks = registry.run_all(context, enabled=enabled, settings=settings)
@@ -30,9 +40,13 @@ def run_wrapped_snakemake(command: list[str], work_dir: Path, output_dir: Path) 
         checks=checks,
         input_files=hash_files([]),
         output_files=hash_files(context.artifacts),
+        work_dir=str(work_dir),
+        output_dir=str(output_dir),
     )
     persist_record(record, settings, sign=True)
-    return process.returncode
+    if any(check.status == "fail" for check in checks):
+        return 1
+    return 0
 
 
 def main() -> None:

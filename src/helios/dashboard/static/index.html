@@ -4,14 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HELIOS Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root { --bg:#0f1117; --panel:#171a23; --panel-2:#1d2230; --line:#2a3042; --text:#e7edf8; --muted:#9aa7bd; --accent:#00d4aa; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;}
-    body { margin:0; background:var(--bg); color:var(--text); font-family:"DM Sans",sans-serif;}
-    .mono { font-family:"JetBrains Mono",monospace; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:ui-sans-serif,system-ui,sans-serif;}
+    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
     header { padding:16px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;}
     a { color:var(--accent); text-decoration:none; }
     nav a { margin-right:14px; }
@@ -46,19 +42,17 @@
 
   <script type="module">
     const app = document.getElementById("app");
-    const KEY_STORAGE = "helios_dashboard_api_key";
+    let apiKeyMemory = "";
 
     function getApiKey() {
-      let key = sessionStorage.getItem(KEY_STORAGE);
-      if (!key) {
-        key = window.prompt("Enter HELIOS dashboard API key (HELIOS_DASHBOARD_API_KEY):", "");
-        if (key) sessionStorage.setItem(KEY_STORAGE, key);
+      if (!apiKeyMemory) {
+        apiKeyMemory = window.prompt("Enter HELIOS dashboard API key (HELIOS_DASHBOARD_API_KEY):", "") || "";
       }
-      return key || "";
+      return apiKeyMemory;
     }
 
     function clearApiKey() {
-      sessionStorage.removeItem(KEY_STORAGE);
+      apiKeyMemory = "";
     }
 
     function authHeaders() {
@@ -100,7 +94,7 @@
       if (!r.ok) throw new Error((await r.json()).detail || "Request failed");
       return r.json();
     });
-    const scoreBadge = (score) => score >= 80 ? "g" : score >= 60 ? "y" : "r";
+    const scoreBadge = (score) => score == null ? "y" : score >= 80 ? "g" : score >= 60 ? "y" : "r";
     const truncate = (v, n=10) => v.length > n ? `${v.slice(0, n)}...` : v;
     const loading = (msg="Loading...") => `<div class="panel">${msg}</div>`;
     const empty = (msg="No runs yet.") => `<div class="panel muted">${msg}</div>`;
@@ -138,7 +132,7 @@
             <td class="mono">${esc(truncate(run.run_id, 12))}</td>
             <td>${esc(run.pipeline_name)}</td>
             <td>${esc(new Date(run.start_time).toLocaleString())}</td>
-            <td><span class="badge ${scoreBadge(run.score)}">${esc(run.score)}</span></td>
+            <td><span class="badge ${scoreBadge(run.score)}">${esc(run.score == null ? "n/a" : run.score)}</span></td>
             <td>${esc(run.status)}</td>
             <td><a href="#/run/${encodeURIComponent(run.run_id)}">View</a></td>
           </tr>`).join("");
@@ -173,7 +167,7 @@
               <circle cx="60" cy="60" r="44" stroke="var(--accent)" stroke-width="10" fill="none"
                 stroke-dasharray="${2.764*score.score} 276.4" transform="rotate(-90 60 60)"></circle>
               <text x="60" y="55" text-anchor="middle" class="mono" fill="white" font-size="16">${score.grade}</text>
-              <text x="60" y="74" text-anchor="middle" class="mono" fill="#9aa7bd" font-size="10">${score.score}</text>
+              <text x="60" y="74" text-anchor="middle" class="mono" fill="#9aa7bd" font-size="10">${score.score == null ? "n/a" : score.score}</text>
             </svg>
           </section>
           <section class="panel">
@@ -224,13 +218,21 @@
       try {
         const [overview, trends] = await Promise.all([api("/api/v1/stats/overview"), api("/api/v1/stats/trends")]);
         app.innerHTML = `<div class="panel"><h2>Analytics</h2>
-          <canvas id="line"></canvas><canvas id="bar"></canvas><canvas id="donut"></canvas>
+          <p class="muted">Totals from the audit database (no third-party chart libraries).</p>
+          <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
+            <tr><td>Total runs</td><td>${esc(overview.total_runs)}</td></tr>
+            <tr><td>Average score</td><td>${esc(overview.avg_score)}</td></tr>
+            <tr><td>GRCh38 adoption %</td><td>${esc(overview.grch38_adoption_rate)}</td></tr>
+            <tr><td>MANE adoption %</td><td>${esc(overview.mane_adoption_rate)}</td></tr>
+          </tbody></table>
+          <h3>Failing checks</h3>
+          <table><thead><tr><th>Check</th><th>Count</th></tr></thead><tbody>${
+            overview.failing_checks_top5.map(x=>`<tr><td>${esc(x.check_id)}</td><td>${esc(x.count)}</td></tr>`).join("") || `<tr><td colspan="2" class="muted">None</td></tr>`
+          }</tbody></table>
+          <h3>Pipelines</h3>
           <table><thead><tr><th>Pipeline</th><th>Points</th></tr></thead><tbody>${
             Object.entries(trends.pipelines).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v.length)}</td></tr>`).join("")
           }</tbody></table></div>`;
-        new Chart(document.getElementById("line"), { type:"line", data:{ labels:overview.vus_rate_trend.map(x=>x.date), datasets:[{label:"VUS Rate",data:overview.vus_rate_trend.map(x=>x.rate),borderColor:"#00d4aa"}]}});
-        new Chart(document.getElementById("bar"), { type:"bar", data:{ labels:overview.failing_checks_top5.map(x=>x.check_id), datasets:[{label:"Failures",data:overview.failing_checks_top5.map(x=>x.count),backgroundColor:"#ef4444"}]}});
-        new Chart(document.getElementById("donut"), { type:"doughnut", data:{ labels:["GRCh38","Other"], datasets:[{data:[overview.grch38_adoption_rate,100-overview.grch38_adoption_rate], backgroundColor:["#00d4aa","#2a3042"]}] }});
       } catch (e) { app.innerHTML = err(e); }
     }
 

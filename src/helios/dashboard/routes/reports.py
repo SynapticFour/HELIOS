@@ -7,16 +7,16 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import cast
 from uuid import UUID
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.background import BackgroundTask
 
 from helios.config import HeliosSettings
 from helios.core.storage import AuditStorage
+from helios.dashboard.deps import get_settings, get_storage
 from helios.export.json_export import _build_ai_act_art11_fragment, export_json
 from helios.export.pdf_export import export_pdf
 from helios.export.rocrate import export_rocrate
@@ -24,16 +24,8 @@ from helios.export.rocrate import export_rocrate
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
 
-def _get_storage(request: Request) -> AuditStorage:
-    return cast(AuditStorage, request.app.state.storage)
-
-
-def _get_settings(request: Request) -> HeliosSettings:
-    return cast(HeliosSettings, request.app.state.settings)
-
-
-STORAGE_DEP = Depends(_get_storage)
-SETTINGS_DEP = Depends(_get_settings)
+STORAGE_DEP = Depends(get_storage)
+SETTINGS_DEP = Depends(get_settings)
 
 
 def _temp_path(prefix: str, suffix: str) -> Path:

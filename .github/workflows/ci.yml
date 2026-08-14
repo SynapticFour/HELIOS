@@ -34,7 +34,7 @@ jobs:
       - name: Mypy
         run: mypy src/helios/
       - name: Pytest
-        run: pytest tests/ -v --tb=short --cov=helios --cov-report=term-missing
+        run: pytest tests/ -v --tb=short --cov=helios --cov-report=term-missing --cov-fail-under=80
       - name: Upload coverage
         uses: codecov/codecov-action@v6
         with:

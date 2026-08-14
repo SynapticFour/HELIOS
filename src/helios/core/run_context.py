@@ -20,6 +20,8 @@ class RunContext:
     metadata: dict[str, str] = field(default_factory=dict)
     # Pipeline source directory (nextflow.config / Snakefile), not task scratch.
     project_dir: Path | None = None
+    # Container references already parsed from trace/metadata (may be empty).
+    container_refs: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.project_dir is None:

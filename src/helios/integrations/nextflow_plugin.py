@@ -43,6 +43,10 @@ def _state_for(session: Any) -> _PluginState:
     return _SESSIONS.setdefault(key, _PluginState())
 
 
+def _drop_session(session: Any) -> None:
+    _SESSIONS.pop(_session_key(session), None)
+
+
 def onFlowCreate(session: Any) -> None:
     """Record run start and capture Nextflow session parameters."""
     state = _state_for(session)
@@ -56,26 +60,27 @@ def onFlowCreate(session: Any) -> None:
 
 def onFlowComplete(session: Any) -> None:
     """Generate audit record after successful Nextflow execution."""
-    _generate_audit(session=session, error=None)
+    try:
+        _generate_audit(session=session)
+    finally:
+        _drop_session(session)
 
 
 def onFlowError(session: Any, error: Exception) -> None:
-    """Generate partial audit record for failed Nextflow execution."""
+    """Do not sign an audit for a failed Nextflow execution."""
     state = _state_for(session)
     state.failed = True
     state.error_message = str(error)
-    _generate_audit(session=session, error=error)
+    _drop_session(session)
 
 
-def _generate_audit(session: Any, error: Exception | None) -> None:
+def _generate_audit(session: Any) -> None:
     state = _state_for(session)
     work_dir = Path(str(getattr(session, "workDir", ".")))
     output_dir = Path(str(getattr(session, "outputDir", ".")))
     parser = NextflowRunParser(work_dir=work_dir, output_dir=output_dir)
     context = parser.build_run_context()
     context.parameters.update(state.parameters)
-    if error is not None:
-        context.metadata["nextflow_error"] = str(error)
 
     settings = load_config()
     registry = CheckRegistry()
@@ -88,7 +93,7 @@ def _generate_audit(session: Any, error: Exception | None) -> None:
             parser.trace_file,
             parser.config_file,
             parser.log_file,
-            *[Path(str(value)) for value in context.parameters.values()],
+            *[Path(str(value)) for value in context.parameters.values() if isinstance(value, str)],
         ]
     )
     record = AuditRecord(
@@ -102,5 +107,7 @@ def _generate_audit(session: Any, error: Exception | None) -> None:
         containers=parser.get_containers(),
         parameters=context.parameters,
         checks=results,
+        work_dir=str(work_dir),
+        output_dir=str(output_dir),
     )
     persist_record(record, settings, sign=True)

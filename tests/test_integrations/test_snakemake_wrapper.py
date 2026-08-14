@@ -41,6 +41,12 @@ def test_snakemake_parser_metadata_and_wrapper(tmp_path: Path, monkeypatch) -> N
 
     monkeypatch.setattr(
         "helios.integrations.snakemake_wrapper.subprocess.run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=1),
+    )
+    failed = run_wrapped_snakemake(["snakemake", "--cores", "1"], snk_root, out_dir)
+    assert failed == 1
+    monkeypatch.setattr(
+        "helios.integrations.snakemake_wrapper.subprocess.run",
         lambda *args, **kwargs: SimpleNamespace(returncode=0),
     )
     monkeypatch.setattr(

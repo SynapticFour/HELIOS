@@ -1,21 +1,31 @@
 [helios]
 signing_key = "~/.helios/keys/helios.key"
+# Public keys (*.pub) used to verify signatures. Embedded PEMs in reports are not trusted.
+trusted_keys_dir = "~/.helios/keys"
 audit_db = "~/.helios/helios.db"
 cache_dir = "~/.helios/cache"
 log_level = "INFO"
+# Wrapped pipeline timeout; exceeded commands exit 124 and are not signed.
+command_timeout_seconds = 86400
 
 [helios.checks]
+# Empty list is rejected. Name every check that should run.
 enabled = ["reference_genome", "container_pinning", "mane_transcripts", "vus_rate", "crypt4gh_output"]
 reference_genome_required = "GRCh38"
 mane_pass_threshold = 0.90
 mane_warn_threshold = 0.50
-container_digest_required = false
+# Tags without @sha256: fail when true.
+container_digest_required = true
+vus_warn_threshold = 0.40
+vus_fail_threshold = 0.70
 
 [helios.export]
 default_format = "json"
 output_dir = "./helios-reports"
-include_rocrate = true
+include_rocrate = false
+# Opt-in provenance stub. Not AI Act Article 10/11 documentation.
 ai_act_fragment = false
 
 [helios.dashboard]
 allow_delete = false
+max_import_bytes = 10485760

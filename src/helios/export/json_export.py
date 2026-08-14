@@ -42,6 +42,11 @@ def _build_ai_act_art11_fragment(record: AuditRecord) -> dict[str, object]:
         "intended_purpose": intended,
         "risk_classification": "unspecified",
         "data_governance": {
+            "status": "not_applicable",
+            "note": (
+                "HELIOS does not train or validate ML models. These fields stay "
+                "empty unless the operator supplies them via pipeline parameters."
+            ),
             "training_data_sources": [],
             "validation_data_sources": [],
             "data_quality_measures": [],

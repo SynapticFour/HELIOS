@@ -10,7 +10,7 @@ from typing import Any
 
 from helios.core.audit_record import ContainerRecord
 from helios.core.run_context import RunContext
-from helios.integrations.containers import split_container
+from helios.integrations.containers import format_container_ref, split_container
 
 
 @dataclass(slots=True)
@@ -91,12 +91,16 @@ class SnakemakeRunParser:
         report_files = [
             path for path in self.snakemake_dir.glob("*.html") if "report" in path.name.lower()
         ]
+        refs = [
+            format_container_ref(item.name, item.tag, item.digest) for item in self.get_containers()
+        ]
         return RunContext(
             pipeline_name="snakemake-pipeline",
             executor="snakemake",
             work_dir=self.snakemake_dir,
             output_dir=self.output_dir,
             artifacts=artifacts,
+            container_refs=refs,
             metadata={
                 "rule_count": str(len(rules)),
                 "log_files": str(log_count),
@@ -106,7 +110,10 @@ class SnakemakeRunParser:
         )
 
     def _load_metadata_file(self, path: Path) -> dict[str, Any] | None:
-        text = path.read_text(encoding="utf-8", errors="ignore").strip()
+        try:
+            text = path.read_text(encoding="utf-8", errors="strict").strip()
+        except UnicodeDecodeError:
+            return None
         if not text:
             return None
         if path.suffix == ".json":
@@ -138,6 +145,7 @@ def build_context(work_dir: Path, output_dir: Path, pipeline_name: str) -> RunCo
         artifacts=context.artifacts,
         metadata=context.metadata,
         project_dir=context.project_dir,
+        container_refs=context.container_refs,
     )
 
 

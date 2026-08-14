@@ -15,7 +15,7 @@ HELIOS is the **shared signed evidence surface** for the commercial spine. It is
 | 1 | Solum audit ingest → signed report documented + CI/fixture covered | **Done** (F5/F6) |
 | 2 | Evidence Pack field → auditor/ethics question map published (non-cert) | See Showcase `docs/for-customers/evidence-pack-auditor-map.md` |
 | 3 | Threat model + IR runbook current | **Done** |
-| 4 | SBOM / lockfile attestation on release path | **Done** (C6) |
+| 4 | SBOM / lockfile on release path | **Partial** — CycloneDX SBOM + `requirements.lock` checksums. The JSON “attestation” is unsigned provenance, not in-toto. |
 | 5 | `v0.1.0` tagged **and** published to PyPI via Trusted Publisher | **Open** (operator — RELEASING.md) |
 | 6 | README Status badge flipped Alpha → Beta only after 1–5 | **Blocked on 5** |
 

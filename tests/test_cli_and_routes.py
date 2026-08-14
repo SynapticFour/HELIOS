@@ -18,13 +18,16 @@ def test_cli_config_commands(tmp_path: Path, monkeypatch) -> None:
     cfg.write_text(
         "[helios]\n"
         f'audit_db = "{tmp_path / "audit.db"}"\n'
-        f'signing_key = "{tmp_path / "signing.key"}"\n',
+        f'signing_key = "{tmp_path / "signing.key"}"\n'
+        'dashboard_api_key = "super-secret-dashboard-key"\n',
         encoding="utf-8",
     )
     runner = CliRunner()
     out = runner.invoke(app, ["config", "print", "--path", str(cfg)])
     assert out.exit_code == 0
     assert '"log_level"' in out.stdout
+    assert "super-secret-dashboard-key" not in out.stdout
+    assert "***" in out.stdout
 
     ok = runner.invoke(app, ["config", "validate", "--path", str(cfg)])
     assert ok.exit_code == 0
@@ -35,7 +38,7 @@ def test_cli_streaming_command(monkeypatch, tmp_path: Path) -> None:
         def __init__(self) -> None:
             self.stdout = iter(["line-1\n", "line-2\n"])
 
-        def wait(self) -> int:
+        def wait(self, timeout: float | None = None) -> int:
             return 0
 
     monkeypatch.setattr("helios.cli.subprocess.Popen", lambda *a, **k: _Proc())

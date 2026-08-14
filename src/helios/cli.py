@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+import time
 import webbrowser
 from collections import deque
 from datetime import UTC, datetime
@@ -25,7 +26,7 @@ from rich.text import Text
 from helios.checks import CheckRegistry, get_check_registry
 from helios.config import HeliosSettings, load_config
 from helios.core.audit_record import AuditRecord
-from helios.core.persist import hash_files, persist_record
+from helios.core.persist import SigningRequiredError, hash_files, persist_record
 from helios.core.run_context import RunContext
 from helios.core.signer import generate_keypair, public_key_fingerprint
 from helios.core.storage import AuditStorage
@@ -57,16 +58,23 @@ def _settings_path(config: Path | None) -> str | None:
 def _build_context_from_record(record: AuditRecord) -> RunContext:
     """Reconstruct a run context from a persisted audit record."""
 
+    work_dir = Path(record.work_dir) if record.work_dir else Path(".")
+    output_dir = Path(record.output_dir) if record.output_dir else Path(".")
     artifacts = [
         Path(file_hash.path) for file_hash in record.output_files if Path(file_hash.path).exists()
     ]
     return RunContext(
         pipeline_name=record.pipeline_name,
         executor=record.executor,
-        work_dir=Path("."),
-        output_dir=Path("."),
+        work_dir=work_dir,
+        output_dir=output_dir,
         parameters=record.parameters,
         artifacts=artifacts,
+        project_dir=work_dir,
+        container_refs=[
+            f"{item.name}:{item.tag}@{item.digest}" if item.digest else f"{item.name}:{item.tag}"
+            for item in record.containers
+        ],
     )
 
 
@@ -102,7 +110,9 @@ def run(
     start_time = datetime.now(UTC)
 
     if command:
-        return_code = _run_streaming_command(command, work_dir=work_dir)
+        return_code = _run_streaming_command(
+            command, work_dir=work_dir, timeout=settings.command_timeout_seconds
+        )
         if return_code != 0:
             console.print(
                 f"[red]Wrapped command exited with code {return_code}.[/red] "
@@ -150,8 +160,14 @@ def run(
         containers=containers,
         parameters=parser_context.parameters,
         checks=checks,
+        work_dir=str(work_dir),
+        output_dir=str(output_dir),
     )
-    record = persist_record(record, settings, sign=not no_sign)
+    try:
+        record = persist_record(record, settings, sign=not no_sign)
+    except SigningRequiredError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
     log = logging.LoggerAdapter(logger, {"run_id": str(record.run_id)})
     log.info("Audit record persisted")
 
@@ -173,6 +189,8 @@ def run(
             border_style="green" if score.failed == 0 else "yellow",
         )
     )
+    if score.failed:
+        raise typer.Exit(code=1)
 
 
 @app.command("solum-audit")
@@ -213,8 +231,14 @@ def solum_audit(
         containers=[],
         parameters=context.parameters,
         checks=checks,
+        work_dir=str(export.parent),
+        output_dir=str(export.parent),
     )
-    record = persist_record(record, settings, sign=not no_sign)
+    try:
+        record = persist_record(record, settings, sign=not no_sign)
+    except SigningRequiredError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
 
     format_name = export_format or settings.export.default_format
     report_path = _export_record(record, format_name, settings)
@@ -242,6 +266,15 @@ def validate(run_id: UUID) -> None:
     record = storage.get_record(run_id)
     if record is None:
         raise typer.BadParameter(f"Run {run_id} not found")
+    if record.signature is None:
+        console.print("[red]Stored record is unsigned; cannot validate integrity.[/red]")
+        raise typer.Exit(code=1)
+    if not record.verify_signature(trusted_keys_dir=settings.trusted_keys_dir):
+        console.print(
+            "[red]Signature is invalid or the signer is not in the trust store "
+            f"({settings.trusted_keys_dir}).[/red]"
+        )
+        raise typer.Exit(code=1)
 
     context = _build_context_from_record(record)
     registry = CheckRegistry()
@@ -265,6 +298,8 @@ def validate(run_id: UUID) -> None:
         f"Re-run summary: {status_counts['pass']} pass, "
         f"{status_counts['warn']} warn, {status_counts['fail']} fail"
     )
+    if status_counts["fail"]:
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -303,12 +338,21 @@ def status(limit: int = 10) -> None:
         elif any(check.status == "warn" for check in record.checks):
             status_value = "warn"
         score = registry.compute_score(record.checks).score
-        score_color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
+        score_label = "n/a" if score is None else str(score)
+        score_color = (
+            "yellow"
+            if score is None
+            else "green"
+            if score >= 80
+            else "yellow"
+            if score >= 60
+            else "red"
+        )
         table.add_row(
             str(record.run_id),
             record.pipeline_name,
             record.start_time.isoformat(),
-            f"[{score_color}]{score}[/{score_color}] ({status_value})",
+            f"[{score_color}]{score_label}[/{score_color}] ({status_value})",
         )
     console.print(table)
 
@@ -349,9 +393,15 @@ def snakemake_wrap(
 
 
 @key_app.command("generate")
-def key_generate() -> None:
+def key_generate(
+    allow_unencrypted: Annotated[bool, typer.Option("--allow-unencrypted")] = False,
+) -> None:
     """Generate Ed25519 signing key pair."""
-    private_path, public_path = generate_keypair()
+    try:
+        private_path, public_path = generate_keypair(allow_unencrypted=allow_unencrypted)
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Private key:[/green] {private_path}")
     console.print(f"[green]Public key:[/green] {public_path}")
     if not os.environ.get("HELIOS_KEY_PASSPHRASE"):
@@ -380,7 +430,7 @@ def key_show() -> None:
 def config_print(path: Path | None = None) -> None:
     """Print effective configuration as JSON."""
     settings = load_config(str(path) if path else None)
-    console.print_json(settings.model_dump_json(indent=2))
+    console.print_json(data=settings.redacted_dump())
 
 
 @config_app.command("validate")
@@ -414,7 +464,7 @@ def _export_record(record: AuditRecord, format_name: str, settings: HeliosSettin
     return primary
 
 
-def _run_streaming_command(command: list[str], work_dir: Path) -> int:
+def _run_streaming_command(command: list[str], work_dir: Path, timeout: int = 86_400) -> int:
     """Run subprocess and stream stdout/stderr to terminal with Rich."""
     process = subprocess.Popen(
         command,
@@ -425,9 +475,14 @@ def _run_streaming_command(command: list[str], work_dir: Path) -> int:
         bufsize=1,
     )
     lines: deque[str] = deque(maxlen=20)
+    deadline = time.monotonic() + timeout
     with Live(console=console, refresh_per_second=8) as live:
         if process.stdout is not None:
             for line in process.stdout:
+                if time.monotonic() > deadline:
+                    process.kill()
+                    process.wait()
+                    return 124
                 lines.append(line.rstrip("\n"))
                 live.update(
                     Panel(
@@ -436,7 +491,17 @@ def _run_streaming_command(command: list[str], work_dir: Path) -> int:
                         border_style="cyan",
                     )
                 )
-    return process.wait()
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        process.kill()
+        process.wait()
+        return 124
+    try:
+        return process.wait(timeout=remaining)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        return 124
 
 
 if __name__ == "__main__":

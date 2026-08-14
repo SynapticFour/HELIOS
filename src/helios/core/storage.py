@@ -1,7 +1,8 @@
-"""SQLite persistence for immutable audit records."""
+"""SQLite persistence for audit records (mutable store; integrity is the trust-store signature)."""
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -49,6 +50,8 @@ def _run_id_has_unique_index(connection: Any) -> bool:
         is_unique = bool(row[2])
         if not is_unique:
             continue
+        if not name.replace("_", "").isalnum():
+            continue
         columns = connection.execute(text(f"PRAGMA index_info('{name}')")).fetchall()
         if [str(col[2]) for col in columns] == ["run_id"]:
             return True
@@ -90,15 +93,21 @@ class AuditStorage:
 
     def __init__(self, database_url: str | None = None) -> None:
         db_url = database_url or f"sqlite:///{Path('~/.helios/helios.db').expanduser()}"
+        db_path: Path | None = None
         if db_url.startswith("sqlite:///"):
             db_path = Path(db_url.removeprefix("sqlite:///"))
             db_path.parent.mkdir(parents=True, exist_ok=True)
+            with contextlib.suppress(OSError):
+                db_path.parent.chmod(0o700)
         self.engine = create_engine(db_url, connect_args=_sqlite_connect_args(db_url))
         if db_url.startswith("sqlite"):
             _enable_sqlite_wal(self.engine)
         SQLModel.metadata.create_all(self.engine)
         if db_url.startswith("sqlite"):
             _ensure_run_id_unique(self.engine)
+        if db_path is not None and db_path.exists():
+            with contextlib.suppress(OSError):
+                db_path.chmod(0o600)
 
     def save_record(self, record: AuditRecord) -> None:
         """Persist an audit record. Duplicate run_id is rejected (append-only)."""
@@ -148,6 +157,24 @@ class AuditStorage:
             statement = statement.offset(offset).limit(limit)
             rows = session.exec(statement).all()
             return [AuditRecord.model_validate_json(row.record_json) for row in rows]
+
+    def count_records(
+        self,
+        pipeline_filter: str | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> int:
+        """Count records matching optional pipeline/time filters."""
+        with Session(self.engine) as session:
+            start_col = cast(Any, AuditRecordRow.start_time)
+            statement = select(AuditRecordRow)
+            if pipeline_filter:
+                statement = statement.where(AuditRecordRow.pipeline_name == pipeline_filter)
+            if start_time is not None:
+                statement = statement.where(start_col >= start_time)
+            if end_time is not None:
+                statement = statement.where(start_col <= end_time)
+            return len(list(session.exec(statement).all()))
 
     def delete_record(self, run_id: UUID) -> bool:
         """Delete an audit record by run identifier (operator maintenance)."""

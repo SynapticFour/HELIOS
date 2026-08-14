@@ -14,11 +14,10 @@ permissions:
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
-    # Requires Dependency graph (Settings → Code security). Non-fatal until enabled.
+    # Requires Dependency graph (Settings → Code security). Fails the PR if review cannot run.
     permissions:
       contents: read
       pull-requests: read
     steps:
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
-        continue-on-error: true

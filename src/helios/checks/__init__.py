@@ -27,16 +27,19 @@ CHECK_ALIASES: dict[str, str] = {
     "clinical_access": "CLIN-ACCESS-001",
 }
 
+Grade = Literal["A", "B", "C", "D", "F", "N/A"]
+
 
 class ComplianceScore(BaseModel):
     """Aggregate compliance score and grade summary."""
 
-    score: int
-    grade: Literal["A", "B", "C", "D", "F"]
+    score: int | None
+    grade: Grade
     breakdown: dict[str, int]
     passed: int
     warned: int
     failed: int
+    scored: bool
 
 
 class CheckRegistry:
@@ -89,9 +92,14 @@ class CheckRegistry:
     def resolve_enabled(self, configured: list[str]) -> list[str]:
         """Resolve configured names or IDs to registered check identifiers.
 
-        Unknown names raise ValueError. An empty list enables every registered
-        check (explicit opt-in to the full suite).
+        Unknown names raise ValueError. An empty list is rejected — operators
+        must name the checks that should run.
         """
+        if not configured:
+            raise ValueError(
+                "checks.enabled is empty. Name the checks to run "
+                "(e.g. reference_genome, container_pinning)."
+            )
         registered = self.get_registered_checks()
         by_name = {
             cls.__name__.lower().replace("_", ""): check_id for check_id, cls in registered.items()
@@ -116,13 +124,13 @@ class CheckRegistry:
                 unknown.append(entry)
         if unknown:
             raise ValueError(f"Unknown check name(s): {', '.join(unknown)}")
-        return resolved or list(registered.keys())
+        return resolved
 
     def compute_score(self, results: list[CheckResult]) -> ComplianceScore:
         """Compute weighted compliance score and letter grade.
 
-        ``skip`` results are excluded from the denominator so not-applicable
-        checks do not inflate the grade.
+        ``skip`` results are excluded from the denominator. If nothing was
+        scored, grade is N/A — never a perfect 100.
         """
         weights = {"info": 1, "warning": 2, "error": 3}
         status_points = {"pass": 1.0, "info": 1.0, "warn": 0.5, "fail": 0.0}
@@ -139,15 +147,25 @@ class CheckRegistry:
             weight = weights[severity]
             denominator += weight
             numerator += weight * status_points.get(result.status, 0.0)
-        score = int(round((numerator / denominator) * 100)) if denominator else 100
-        grade = self._grade_for_score(score)
+        if denominator == 0:
+            return ComplianceScore(
+                score=None,
+                grade="N/A",
+                breakdown={"pass": passed, "warn": warned, "fail": failed},
+                passed=passed,
+                warned=warned,
+                failed=failed,
+                scored=False,
+            )
+        score = int(round((numerator / denominator) * 100))
         return ComplianceScore(
             score=score,
-            grade=grade,
+            grade=self._grade_for_score(score),
             breakdown={"pass": passed, "warn": warned, "fail": failed},
             passed=passed,
             warned=warned,
             failed=failed,
+            scored=True,
         )
 
     def _discover_checks(self) -> None:
@@ -164,7 +182,7 @@ class CheckRegistry:
                     continue
                 self.register(obj)
 
-    def _grade_for_score(self, score: int) -> Literal["A", "B", "C", "D", "F"]:
+    def _grade_for_score(self, score: int) -> Grade:
         if score >= 90:
             return "A"
         if score >= 80:

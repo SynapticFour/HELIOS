@@ -29,6 +29,18 @@ def test_mane_transcripts_alias_resolves() -> None:
         registry.resolve_enabled(["not_a_real_check"])
 
 
+def test_skip_only_suite_is_not_a_perfect_score() -> None:
+    registry = CheckRegistry()
+    skipped = [
+        CheckResult(check_id="GA4GH-CRYPT-001", status="skip", message="n/a"),
+        CheckResult(check_id="SEC-CONTAINER-001", status="skip", message="n/a"),
+    ]
+    score = registry.compute_score(skipped)
+    assert score.scored is False
+    assert score.score is None
+    assert score.grade == "N/A"
+
+
 def test_skip_does_not_inflate_score() -> None:
     registry = CheckRegistry()
     skipped = [
@@ -172,10 +184,13 @@ def test_invalid_signature_import_rejected(tmp_path: Path) -> None:
     from helios.core.signer import generate_keypair, sign_record
 
     api_key = "import-key"
-    private_path, _public_path = generate_keypair(base_dir=tmp_path, name="test")
+    private_path, _public_path = generate_keypair(
+        base_dir=tmp_path, name="test", allow_unencrypted=True
+    )
     settings = HeliosSettings(
         audit_db=tmp_path / "api.db",
         signing_key=tmp_path / "none.key",
+        trusted_keys_dir=tmp_path,
         dashboard_api_key=api_key,
     )
     signed = sign_record(AuditRecord(pipeline_name="nf", executor="nextflow"), private_path)
@@ -191,7 +206,18 @@ def test_invalid_signature_import_rejected(tmp_path: Path) -> None:
         assert "signature" in denied.json()["detail"].lower()
 
 
-def test_persist_fills_reference_genome(tmp_path: Path) -> None:
+def test_persist_requires_signing_key(tmp_path: Path) -> None:
+    from helios.core.persist import SigningRequiredError, persist_record
+
+    settings = HeliosSettings(
+        audit_db=tmp_path / "audit.db",
+        signing_key=tmp_path / "missing.key",
+    )
+    record = AuditRecord(pipeline_name="nf", executor="nextflow")
+    with pytest.raises(SigningRequiredError):
+        persist_record(record, settings, sign=True)
+    stored = persist_record(record, settings, sign=False)
+    assert stored.signature is None
     from helios.core.persist import persist_record
 
     settings = HeliosSettings(
@@ -209,7 +235,7 @@ def test_persist_fills_reference_genome(tmp_path: Path) -> None:
                 evidence={
                     "assembly": "GRCh38",
                     "header_source_match": "https://example.test/ref",
-                    "known_md5_chr1": "abc123",
+                    "measured_md5_chr1": "abc123",
                 },
             )
         ],
@@ -218,7 +244,8 @@ def test_persist_fills_reference_genome(tmp_path: Path) -> None:
     assert stored.reference_genome is not None
     assert stored.reference_genome.assembly == "GRCh38"
     assert stored.reference_genome.source_url == "https://example.test/ref"
-    assert stored.reference_genome.sha256 == "abc123"
+    assert stored.reference_genome.sha256 == ""
+    assert stored.reference_genome.contig_md5["chr1"] == "abc123"
 
 
 def test_legacy_db_run_id_unique_migration(tmp_path: Path) -> None:
@@ -272,15 +299,19 @@ def test_legacy_db_run_id_unique_migration(tmp_path: Path) -> None:
         storage.save_record(listed[0])
 
 
-def test_key_generate_warns_without_passphrase(
+def test_key_generate_requires_passphrase_or_flag(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("HELIOS_KEY_PASSPHRASE", raising=False)
-    monkeypatch.setattr(
-        "helios.cli.generate_keypair",
-        lambda: (tmp_path / "helios.key", tmp_path / "helios.pub"),
-    )
-    result = CliRunner().invoke(app, ["key", "generate"])
-    assert result.exit_code == 0
+    monkeypatch.setenv("HELIOS_KEY_DIR", str(tmp_path))
+    denied = CliRunner().invoke(app, ["key", "generate"])
+    assert denied.exit_code == 1
+    assert "HELIOS_KEY_PASSPHRASE" in denied.stdout
+
+    result = CliRunner().invoke(app, ["key", "generate", "--allow-unencrypted"])
+    assert result.exit_code == 0, result.stdout
     assert "unencrypted" in result.stdout
     assert "HELIOS_KEY_PASSPHRASE" in result.stdout
+    private = tmp_path / "helios.key"
+    assert private.exists()
+    assert private.stat().st_mode & 0o777 == 0o600

@@ -14,7 +14,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Ruff
+        run: ruff check src/ tests/
+      - name: Mypy
+        run: mypy src/helios/
+      - name: Pytest
+        run: pytest tests/ -q --cov=helios --cov-fail-under=80
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # OIDC for PyPI Trusted Publisher
@@ -43,25 +63,26 @@ jobs:
           pip install build
           python -m build
           ls -la dist
-      - name: Generate CycloneDX SBOM + lockfile attestation
+      - name: Generate CycloneDX SBOM
         run: |
           set -euo pipefail
           python -m pip install "cyclonedx-bom>=5"
-          # Prefer lockfile/requirements style attestation of the built environment
           pip install -e .
           cyclonedx-py environment -o helios-sbom.cdx.json --of JSON
-          shasum -a 256 helios-sbom.cdx.json pyproject.toml > SHA256SUMS-sbom.txt
-          # Attest pinned project metadata for the tag
-          {
-            echo "{"
-            echo "  \"project\": \"helios-audit\","
-            echo "  \"git_tag\": \"${GITHUB_REF_NAME}\","
-            echo "  \"git_sha\": \"${GITHUB_SHA}\","
-            echo "  \"pyproject_sha256\": \"$(shasum -a 256 pyproject.toml | awk '{print $1}')\","
-            echo "  \"sbom\": \"helios-sbom.cdx.json\""
-            echo "}"
-          } > helios-lockfile-attestation.json
-          cat helios-lockfile-attestation.json
+          shasum -a 256 helios-sbom.cdx.json pyproject.toml requirements.lock > SHA256SUMS-sbom.txt
+          python - <<'PY'
+          import hashlib, json, os, pathlib
+          payload = {
+              "project": "helios-audit",
+              "git_tag": os.environ["GITHUB_REF_NAME"],
+              "git_sha": os.environ["GITHUB_SHA"],
+              "pyproject_sha256": hashlib.sha256(pathlib.Path("pyproject.toml").read_bytes()).hexdigest(),
+              "requirements_lock_sha256": hashlib.sha256(pathlib.Path("requirements.lock").read_bytes()).hexdigest(),
+              "sbom": "helios-sbom.cdx.json",
+              "note": "Unsigned provenance JSON. Prefer the GitHub artifact checksums and PyPI Trusted Publisher.",
+          }
+          pathlib.Path("helios-lockfile-attestation.json").write_text(json.dumps(payload, indent=2) + "\n")
+          PY
       - name: Upload SBOM artifacts to workflow
         uses: actions/upload-artifact@v4
         with:
@@ -70,6 +91,7 @@ jobs:
             helios-sbom.cdx.json
             SHA256SUMS-sbom.txt
             helios-lockfile-attestation.json
+            requirements.lock
       - name: Attach SBOM to GitHub Release (if release exists for tag)
         uses: softprops/action-gh-release@v2
         with:
@@ -77,9 +99,9 @@ jobs:
             helios-sbom.cdx.json
             SHA256SUMS-sbom.txt
             helios-lockfile-attestation.json
+            requirements.lock
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
