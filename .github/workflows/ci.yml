@@ -36,6 +36,6 @@ jobs:
       - name: Pytest
         run: pytest tests/ -v --tb=short --cov=helios --cov-report=term-missing --cov-fail-under=80
       - name: Upload coverage
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
