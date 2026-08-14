@@ -67,7 +67,7 @@ make down
 make destroy
 ```
 
-CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-API-Key`, `Authorization: Bearer`, HTTP Basic password, or `?api_key=` (browser UI prompts and stores it in `sessionStorage`).
+CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-API-Key`, `Authorization: Bearer`, or HTTP Basic password (browser UI prompts and stores it in `sessionStorage`).
 
 ## Documentation
 

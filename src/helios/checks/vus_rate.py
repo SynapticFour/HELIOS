@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 
 from helios.checks.base import BaseCheck
+from helios.checks.vcf_io import iter_info_fields, vcf_artifacts
 from helios.core.audit_record import CheckResult
 from helios.core.run_context import RunContext
 
@@ -20,15 +21,13 @@ class VUSRateCheck(BaseCheck):
 
     def run(self, context: RunContext) -> CheckResult:
         """Calculate VUS percentage across VCF artifacts."""
-        vcfs = [p for p in context.artifacts if p.suffix == ".vcf"]
+        vcfs = vcf_artifacts(context)
         vus_count = 0
         total_classified = 0
         distribution: Counter[str] = Counter()
         for vcf in vcfs:
-            for line in vcf.read_text(encoding="utf-8").splitlines():
-                if line.startswith("#") or not line:
-                    continue
-                label = self._classify_variant(line)
+            for info in iter_info_fields(vcf):
+                label = self._classify_variant(info)
                 if label is None:
                     continue
                 distribution[label] += 1
@@ -60,8 +59,7 @@ class VUSRateCheck(BaseCheck):
             },
         )
 
-    def _classify_variant(self, line: str) -> str | None:
-        info = line.split("\t", maxsplit=8)[7] if "\t" in line else ""
+    def _classify_variant(self, info: str) -> str | None:
         fields = {
             item.split("=", 1)[0]: item.split("=", 1)[1] for item in info.split(";") if "=" in item
         }

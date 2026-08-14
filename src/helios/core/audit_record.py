@@ -53,6 +53,8 @@ class AuditSignature(BaseModel):
     public_key_fingerprint: str
     signature_b64: str
     signed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # Embedded SPKI PEM so third parties can verify without a local keystore.
+    public_key_pem: str | None = None
 
 
 class AuditRecord(BaseModel):
@@ -63,7 +65,7 @@ class AuditRecord(BaseModel):
     run_id: UUID = Field(default_factory=uuid4)
     pipeline_name: str
     pipeline_version: str | None = None
-    executor: Literal["nextflow", "snakemake", "cwl", "unknown"] = "unknown"
+    executor: Literal["nextflow", "snakemake", "unknown"] = "unknown"
     start_time: datetime = Field(default_factory=lambda: datetime.now(UTC))
     end_time: datetime | None = None
     input_files: list[FileHash] = Field(default_factory=list)
@@ -96,4 +98,5 @@ class AuditRecord(BaseModel):
             fingerprint=self.signature.public_key_fingerprint,
             payload=self.canonical_json().encode("utf-8"),
             signature=signature,
+            public_key_pem=self.signature.public_key_pem,
         )

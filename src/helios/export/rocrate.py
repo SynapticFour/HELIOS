@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from helios.checks import CheckRegistry
+from helios.checks import get_check_registry
 from helios.core.audit_record import AuditRecord
 
 
@@ -115,7 +115,7 @@ def export_rocrate(record: AuditRecord, output_dir: Path) -> Path:
 
 def record_check_standard_map(check_id: str, record: AuditRecord) -> list[str]:
     """Map check standards to schema.org/bioschemas style identifiers."""
-    registry = CheckRegistry()
+    registry = get_check_registry()
     check_class = registry.get_registered_checks().get(check_id)
     if check_class is not None:
         mapped: list[str] = []

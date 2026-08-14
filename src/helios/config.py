@@ -1,7 +1,7 @@
 """Typed HELIOS configuration loaded from TOML and environment variables."""
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import (
@@ -47,6 +47,19 @@ class DashboardConfig(BaseModel):
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:8765"])
     # Nested TOML/env: HELIOS_DASHBOARD__API_KEY (prefer top-level HELIOS_DASHBOARD_API_KEY).
     api_key: str | None = None
+    # Deletion is off by default; audit rows are append-only unless explicitly enabled.
+    allow_delete: bool = False
+
+
+class HeliosTomlSource(TomlConfigSettingsSource):
+    """TOML source that unwraps a top-level [helios] table."""
+
+    def __call__(self) -> dict[str, Any]:
+        data = super().__call__()
+        nested = data.get("helios")
+        if isinstance(nested, dict):
+            return nested
+        return data
 
 
 class HeliosSettings(BaseSettings):
@@ -113,7 +126,7 @@ class HeliosSettings(BaseSettings):
             init_settings,
             env_settings,
             dotenv_settings,
-            TomlConfigSettingsSource(settings_cls),
+            HeliosTomlSource(settings_cls),
             file_secret_settings,
         )
 
@@ -124,7 +137,7 @@ def load_config(path: str | None = None) -> HeliosSettings:
         return HeliosSettings()
     config_path = Path(path)
     if not config_path.exists():
-        return HeliosSettings()
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
     from tomllib import loads
 
     raw = loads(config_path.read_text(encoding="utf-8"))

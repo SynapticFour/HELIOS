@@ -10,6 +10,7 @@ from typing import Any
 
 from helios.core.audit_record import ContainerRecord
 from helios.core.run_context import RunContext
+from helios.integrations.containers import split_container
 
 
 @dataclass(slots=True)
@@ -73,7 +74,7 @@ class SnakemakeRunParser:
             container = record.container or ""
             if not container:
                 continue
-            name, tag, digest = _split_container(container)
+            name, tag, digest = split_container(container)
             found[container] = ContainerRecord(
                 name=name,
                 tag=tag,
@@ -101,6 +102,7 @@ class SnakemakeRunParser:
                 "log_files": str(log_count),
                 "report_files": ",".join(str(path) for path in report_files),
             },
+            project_dir=self.snakemake_dir,
         )
 
     def _load_metadata_file(self, path: Path) -> dict[str, Any] | None:
@@ -135,6 +137,7 @@ def build_context(work_dir: Path, output_dir: Path, pipeline_name: str) -> RunCo
         parameters=context.parameters,
         artifacts=context.artifacts,
         metadata=context.metadata,
+        project_dir=context.project_dir,
     )
 
 
@@ -151,15 +154,3 @@ def _as_optional_str(value: object) -> str | None:
     if value is None:
         return None
     return str(value)
-
-
-def _split_container(ref: str) -> tuple[str, str, str | None]:
-    digest = None
-    if "@sha256:" in ref:
-        ref, digest = ref.split("@sha256:", 1)
-        digest = f"sha256:{digest}"
-    if ":" in ref:
-        name, tag = ref.rsplit(":", 1)
-    else:
-        name, tag = ref, ""
-    return name, tag, digest

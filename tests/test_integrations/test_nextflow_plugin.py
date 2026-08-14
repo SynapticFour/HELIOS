@@ -31,11 +31,11 @@ def test_plugin_hooks_generate_audit(tmp_path: Path, monkeypatch) -> None:
 
     saved: list[object] = []
 
-    class _Storage:
-        def save_record(self, record: object) -> None:
-            saved.append(record)
+    def _persist(record: object, _settings: object, sign: bool = True) -> object:
+        saved.append(record)
+        return record
 
-    monkeypatch.setattr(nextflow_plugin, "AuditStorage", _Storage)
+    monkeypatch.setattr(nextflow_plugin, "persist_record", _persist)
     session = _Session(str(work_dir), str(out_dir), {"outdir": str(out_dir)})
     nextflow_plugin.onFlowCreate(session)
     nextflow_plugin.onFlowComplete(session)

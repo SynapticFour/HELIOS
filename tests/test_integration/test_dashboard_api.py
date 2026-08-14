@@ -31,6 +31,7 @@ def test_dashboard_api_roundtrip(tmp_path: Path) -> None:
             response = client.post(
                 "/api/v1/runs/import",
                 headers=_AUTH,
+                params={"allow_unsigned": "true"},
                 files={"file": ("record.json", handle, "application/json")},
             )
         assert response.status_code == 200

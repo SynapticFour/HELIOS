@@ -8,7 +8,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 
-from helios.checks import CheckRegistry
+from helios.checks import get_check_registry
+from helios.config import HeliosSettings
 from helios.core.audit_record import AuditRecord
 from helios.core.storage import AuditStorage
 from helios.dashboard.models import DeleteResponse, RunImportResponse, RunListItem
@@ -20,7 +21,12 @@ def _get_storage(request: Request) -> AuditStorage:
     return cast(AuditStorage, request.app.state.storage)
 
 
+def _get_settings(request: Request) -> HeliosSettings:
+    return cast(HeliosSettings, request.app.state.settings)
+
+
 STORAGE_DEP = Depends(_get_storage)
+SETTINGS_DEP = Depends(_get_settings)
 IMPORT_FILE = File(...)
 
 
@@ -37,21 +43,21 @@ def list_runs(
 ) -> list[RunListItem]:
     """List runs with pagination and optional filters."""
     storage = _get_storage(request)
-    records = storage.list_records(limit=limit)
-    if pipeline:
-        records = [record for record in records if record.pipeline_name == pipeline]
+    start = datetime.fromisoformat(start_date) if start_date else None
+    end = datetime.fromisoformat(end_date) if end_date else None
+    records = storage.list_records(
+        limit=10_000,
+        offset=0,
+        pipeline_filter=pipeline,
+        start_time=start,
+        end_time=end,
+    )
     if status:
         records = [record for record in records if _status_for_record(record) == status]
-    if start_date:
-        start = datetime.fromisoformat(start_date)
-        records = [record for record in records if record.start_time >= start]
-    if end_date:
-        end = datetime.fromisoformat(end_date)
-        records = [record for record in records if record.start_time <= end]
-    records = records[offset:]
+    registry = get_check_registry()
     payload: list[RunListItem] = []
     for record in records:
-        score = CheckRegistry().compute_score(record.checks).score
+        score = registry.compute_score(record.checks).score
         payload.append(
             RunListItem(
                 run_id=str(record.run_id),
@@ -64,7 +70,7 @@ def list_runs(
         )
     if min_score is not None:
         payload = [item for item in payload if item.score >= min_score]
-    return payload
+    return payload[offset : offset + limit]
 
 
 @router.get("/{run_id}")
@@ -82,24 +88,48 @@ def get_run_score(run_id: UUID, storage: AuditStorage = STORAGE_DEP) -> dict[str
     record = storage.get_record(run_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    return CheckRegistry().compute_score(record.checks).model_dump(mode="json")
+    return get_check_registry().compute_score(record.checks).model_dump(mode="json")
 
 
 @router.post("/import")
 async def import_run(
     file: UploadFile = IMPORT_FILE,
     storage: AuditStorage = STORAGE_DEP,
+    allow_unsigned: bool = Query(False),
 ) -> RunImportResponse:
-    """Import an AuditRecord JSON file."""
+    """Import an AuditRecord JSON file.
+
+    Signed records must verify. Unsigned records require ``allow_unsigned=true``.
+    """
     raw = await file.read()
     record = AuditRecord.model_validate_json(raw)
-    storage.save_record(record)
+    if record.signature is None:
+        if not allow_unsigned:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsigned audit records require allow_unsigned=true.",
+            )
+    elif not record.verify_signature():
+        raise HTTPException(status_code=400, detail="Audit record signature is invalid")
+    try:
+        storage.save_record(record)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return RunImportResponse(run_id=str(record.run_id))
 
 
 @router.delete("/{run_id}")
-def delete_run(run_id: UUID, storage: AuditStorage = STORAGE_DEP) -> DeleteResponse:
-    """Delete a run record by ID."""
+def delete_run(
+    run_id: UUID,
+    storage: AuditStorage = STORAGE_DEP,
+    settings: HeliosSettings = SETTINGS_DEP,
+) -> DeleteResponse:
+    """Delete a run record by ID when dashboard.allow_delete is enabled."""
+    if not settings.dashboard.allow_delete:
+        raise HTTPException(
+            status_code=403,
+            detail="Record deletion is disabled. Set dashboard.allow_delete = true to enable.",
+        )
     deleted = storage.delete_record(run_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Run not found")

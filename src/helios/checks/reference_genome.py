@@ -49,8 +49,10 @@ class ReferenceGenomeCheck(BaseCheck):
         mentions_grch38 = "grch38" in joined or "hg38" in joined
         mentions_grch37 = "grch37" in joined or "hg19" in joined
 
+        required = self.settings.checks.reference_genome_required if self.settings else "GRCh38"
         evidence = {
             "artifact": str(path),
+            "required_assembly": required,
             "known_md5_chr1": KNOWN_GRCH38_MD5["chr1"],
             "known_md5_chr22": KNOWN_GRCH38_MD5["chr22"],
         }
@@ -59,10 +61,11 @@ class ReferenceGenomeCheck(BaseCheck):
             source = f"{entry.get('UR', '')}|{entry.get('M5', '')}".lower()
             if "grch38" in source or entry.get("M5") in KNOWN_GRCH38_MD5.values():
                 evidence["header_source_match"] = source
+                evidence["assembly"] = "GRCh38"
                 return CheckResult(
                     check_id=self.check_id,
                     status="pass",
-                    message="GRCh38 evidence found in sequence dictionary metadata.",
+                    message=f"{required} evidence found in sequence dictionary metadata.",
                     evidence=evidence,
                 )
 
@@ -117,5 +120,5 @@ class ReferenceGenomeCheck(BaseCheck):
                 header["SQ"].append(parsed)
             return header
 
-        with pysam.AlignmentFile(str(path), "r") as alignment:
+        with pysam.AlignmentFile(str(path), "rb") as alignment:
             return alignment.header.to_dict()

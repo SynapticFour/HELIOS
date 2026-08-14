@@ -9,7 +9,7 @@ from helios.checks.base import BaseCheck
 from helios.core.audit_record import CheckResult
 from helios.core.run_context import RunContext
 
-CONTAINER_REGEX = re.compile(r"(?:container|conda)\s*[:=]\s*['\"]([^'\"]+)['\"]")
+CONTAINER_REGEX = re.compile(r"container\s*[:=]\s*['\"]([^'\"]+)['\"]")
 
 
 class ContainerPinningCheck(BaseCheck):
@@ -23,10 +23,12 @@ class ContainerPinningCheck(BaseCheck):
 
     def run(self, context: RunContext) -> CheckResult:
         """Scan workflow definitions for unsafe container references."""
-        candidates = self._discover_candidate_files(context.work_dir)
+        root = context.project_dir or context.work_dir
+        candidates = self._discover_candidate_files(root)
         found: list[str] = []
         failures: list[str] = []
         warnings: list[str] = []
+        digest_required = bool(self.settings and self.settings.checks.container_digest_required)
 
         for path in candidates:
             content = path.read_text(encoding="utf-8")
@@ -36,6 +38,10 @@ class ContainerPinningCheck(BaseCheck):
                     failures.append(ref)
                 elif ":" in ref and "@sha256:" not in ref:
                     warnings.append(ref)
+
+        if digest_required and warnings:
+            failures.extend(warnings)
+            warnings = []
 
         if failures:
             failure_list = ", ".join(sorted(set(failures)))
@@ -61,11 +67,20 @@ class ContainerPinningCheck(BaseCheck):
         )
 
     def _discover_candidate_files(self, root: Path) -> list[Path]:
-        extensions = {".nf", ".smk", ".snakefile", ".config"}
+        """Scan pipeline source files, not Nextflow task scratch trees."""
+        if not root.exists():
+            return []
+        names = {"Snakefile", "nextflow.config"}
+        patterns = ("*.nf", "*.smk", "*.config", "modules/**/*.nf", "workflows/**/*.nf")
         files: list[Path] = []
-        for path in root.rglob("*"):
-            if path.is_file() and (
-                path.suffix in extensions or path.name in {"Snakefile", "nextflow.config"}
-            ):
+        seen: set[Path] = set()
+        for path in root.iterdir() if root.is_dir() else []:
+            if path.is_file() and (path.suffix in {".nf", ".smk", ".config"} or path.name in names):
                 files.append(path)
+                seen.add(path)
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                if path.is_file() and path not in seen:
+                    files.append(path)
+                    seen.add(path)
         return files

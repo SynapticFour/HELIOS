@@ -8,7 +8,7 @@ from typing import cast
 
 from fastapi import APIRouter, Depends, Request
 
-from helios.checks import CheckRegistry
+from helios.checks import get_check_registry
 from helios.core.storage import AuditStorage
 from helios.dashboard.models import DateRatePoint, FailingCheckCount, OverviewResponse
 
@@ -35,7 +35,8 @@ def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
             mane_adoption_rate=0.0,
             vus_rate_trend=[],
         )
-    scores = [CheckRegistry().compute_score(record.checks).score for record in records]
+    registry = get_check_registry()
+    scores = [registry.compute_score(record.checks).score for record in records]
     failing = Counter(
         check.check_id for record in records for check in record.checks if check.status == "fail"
     ).most_common(5)
@@ -69,9 +70,10 @@ def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
 def trends(storage: AuditStorage = STORAGE_DEP) -> dict[str, object]:
     """Return compliance score trends grouped by pipeline."""
     records = storage.list_records(limit=2000)
+    registry = get_check_registry()
     by_pipeline: dict[str, list[dict[str, object]]] = defaultdict(list)
     for record in records:
-        score = CheckRegistry().compute_score(record.checks).score
+        score = registry.compute_score(record.checks).score
         by_pipeline[record.pipeline_name].append(
             {"date": record.start_time.isoformat(), "score": score}
         )
@@ -80,4 +82,7 @@ def trends(storage: AuditStorage = STORAGE_DEP) -> dict[str, object]:
 
 def _record_has_grch38(record: object) -> bool:
     checks = getattr(record, "checks", [])
-    return any("grch38" in str(getattr(check, "evidence", "")).lower() for check in checks)
+    return any(
+        getattr(check, "check_id", "") == "GA4GH-REF-001" and getattr(check, "status", "") == "pass"
+        for check in checks
+    )

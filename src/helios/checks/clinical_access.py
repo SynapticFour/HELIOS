@@ -37,7 +37,7 @@ class ClinicalAccessCheck(BaseCheck):
         if path is None:
             return CheckResult(
                 check_id=self.check_id,
-                status="pass",
+                status="skip",
                 message=(
                     "No Solum audit export supplied "
                     "(parameters.solum_audit_export or *.solum-audit*.json); skipped."
@@ -75,6 +75,24 @@ class ClinicalAccessCheck(BaseCheck):
 
         record_count = int(doc.get("record_count") or len(records))
         clinical_total = sum(counts.values())
+        evidence = {
+            "path": str(path),
+            "format": fmt,
+            "generator": doc.get("generator"),
+            "record_count": record_count,
+            "clinical_event_total": clinical_total,
+            "clinical_event_counts": dict(counts),
+        }
+        if clinical_total == 0:
+            return CheckResult(
+                check_id=self.check_id,
+                status="warn",
+                message=(
+                    f"Solum chain export OK ({record_count} records) but no "
+                    "clinical-plane consent/authorization/crypto events were found."
+                ),
+                evidence=evidence,
+            )
         return CheckResult(
             check_id=self.check_id,
             status="pass",
@@ -82,14 +100,7 @@ class ClinicalAccessCheck(BaseCheck):
                 f"Solum chain export OK ({record_count} records, "
                 f"{clinical_total} clinical-plane events)."
             ),
-            evidence={
-                "path": str(path),
-                "format": fmt,
-                "generator": doc.get("generator"),
-                "record_count": record_count,
-                "clinical_event_total": clinical_total,
-                "clinical_event_counts": dict(counts),
-            },
+            evidence=evidence,
         )
 
     @staticmethod

@@ -12,9 +12,15 @@ class RunContext:
     """Execution context captured for a pipeline run."""
 
     pipeline_name: str
-    executor: Literal["nextflow", "snakemake", "cwl", "unknown"]
+    executor: Literal["nextflow", "snakemake", "unknown"]
     work_dir: Path
     output_dir: Path
     parameters: dict[str, Any] = field(default_factory=dict)  # Any for arbitrary CLI/config values.
     artifacts: list[Path] = field(default_factory=list)
     metadata: dict[str, str] = field(default_factory=dict)
+    # Pipeline source directory (nextflow.config / Snakefile), not task scratch.
+    project_dir: Path | None = None
+
+    def __post_init__(self) -> None:
+        if self.project_dir is None:
+            object.__setattr__(self, "project_dir", self.work_dir)

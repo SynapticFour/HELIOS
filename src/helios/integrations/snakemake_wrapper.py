@@ -7,8 +7,9 @@ import sys
 from pathlib import Path
 
 from helios.checks import CheckRegistry
+from helios.config import load_config
 from helios.core.audit_record import AuditRecord
-from helios.core.storage import AuditStorage
+from helios.core.persist import hash_files, persist_record
 from helios.integrations.snakemake import SnakemakeRunParser
 
 
@@ -17,15 +18,20 @@ def run_wrapped_snakemake(command: list[str], work_dir: Path, output_dir: Path) 
     process = subprocess.run(command, cwd=work_dir)
     parser = SnakemakeRunParser(snakemake_dir=work_dir, output_dir=output_dir)
     context = parser.build_run_context()
-    checks = CheckRegistry().run_all(context)
+    settings = load_config()
+    registry = CheckRegistry()
+    enabled = registry.resolve_enabled(settings.checks.enabled)
+    checks = registry.run_all(context, enabled=enabled, settings=settings)
     record = AuditRecord(
         pipeline_name=context.pipeline_name,
         executor="snakemake",
         containers=parser.get_containers(),
         parameters={"wrapped_command": command},
         checks=checks,
+        input_files=hash_files([]),
+        output_files=hash_files(context.artifacts),
     )
-    AuditStorage().save_record(record)
+    persist_record(record, settings, sign=True)
     return process.returncode
 
 

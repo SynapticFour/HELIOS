@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import csv
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from helios.core.audit_record import ContainerRecord
 from helios.core.run_context import RunContext
+from helios.integrations.containers import split_container
 
 TRACE_COLUMNS = [
     "task_id",
@@ -59,16 +61,36 @@ class NextflowRunParser:
     def __init__(self, work_dir: Path, output_dir: Path) -> None:
         self.work_dir = work_dir
         self.output_dir = output_dir
-        self.trace_file = work_dir / "trace.txt"
-        self.config_file = work_dir / "nextflow.config"
-        self.log_file = work_dir / ".nextflow.log"
+        self.launch_dir = _resolve_launch_dir(work_dir)
+        self.trace_file = _first_existing(
+            work_dir / "trace.txt",
+            work_dir.parent / "trace.txt",
+            self.launch_dir / "trace.txt",
+            Path.cwd() / "trace.txt",
+        )
+        self.config_file = _first_existing(
+            work_dir / "nextflow.config",
+            work_dir.parent / "nextflow.config",
+            self.launch_dir / "nextflow.config",
+            Path.cwd() / "nextflow.config",
+        )
+        self.log_file = _first_existing(
+            work_dir / ".nextflow.log",
+            work_dir.parent / ".nextflow.log",
+            self.launch_dir / ".nextflow.log",
+            Path.cwd() / ".nextflow.log",
+        )
         self.warnings: list[str] = []
+        self._trace_cache: list[ProcessRecord] | None = None
 
     def parse_trace(self) -> list[ProcessRecord]:
         """Parse trace TSV; return empty list if trace file is unavailable."""
+        if self._trace_cache is not None:
+            return self._trace_cache
         if not self.trace_file.exists():
             self.warnings.append(f"Trace file not found at {self.trace_file}")
-            return []
+            self._trace_cache = []
+            return self._trace_cache
 
         with self.trace_file.open("r", encoding="utf-8", newline="") as handle:
             sample = handle.read(4096)
@@ -77,7 +99,8 @@ class NextflowRunParser:
             reader = csv.DictReader(handle, delimiter=delimiter)
             if reader.fieldnames is None:
                 self.warnings.append(f"Trace file {self.trace_file} has no header row")
-                return []
+                self._trace_cache = []
+                return self._trace_cache
             rows = [self._normalize_row(dict(row)) for row in reader]
 
         process_records: list[ProcessRecord] = []
@@ -85,7 +108,6 @@ class NextflowRunParser:
             process_name = row.get("name", row.get("process", "unknown")).strip()
             workdir = Path(row.get("workdir", "")) if row.get("workdir") else self.work_dir
             input_files = [p for p in workdir.glob("*.command.*") if p.is_file()]
-            output_files = [p for p in self.output_dir.rglob("*") if p.is_file()]
             process_records.append(
                 ProcessRecord(
                     process_name=process_name,
@@ -93,9 +115,10 @@ class NextflowRunParser:
                     status=row.get("status", "UNKNOWN").strip(),
                     duration_ms=self._parse_duration_ms(row.get("duration", "0")),
                     input_files=input_files,
-                    output_files=output_files,
+                    output_files=[],
                 )
             )
+        self._trace_cache = process_records
         return process_records
 
     def parse_config(self) -> PipelineConfig:
@@ -141,7 +164,7 @@ class NextflowRunParser:
             container = process.container
             if not container:
                 continue
-            name, tag, digest = _split_container(container)
+            name, tag, digest = split_container(container)
             records[container] = ContainerRecord(
                 name=name,
                 tag=tag,
@@ -149,6 +172,23 @@ class NextflowRunParser:
                 pinned=bool(digest) and tag not in {"", "latest"},
             )
         return list(records.values())
+
+    def load_parameters(self) -> dict[str, object]:
+        """Load params.json from launch or work directories when present."""
+        for candidate in (
+            self.launch_dir / "params.json",
+            self.work_dir / "params.json",
+            self.work_dir.parent / "params.json",
+        ):
+            if not candidate.is_file():
+                continue
+            try:
+                payload = json.loads(candidate.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                return payload
+        return {}
 
     def build_run_context(self) -> RunContext:
         """Assemble full run context for the parsed Nextflow run."""
@@ -161,6 +201,8 @@ class NextflowRunParser:
             work_dir=self.work_dir,
             output_dir=self.output_dir,
             artifacts=artifacts,
+            parameters=self.load_parameters(),
+            project_dir=self.launch_dir,
             metadata={
                 "pipeline_version": parsed_config.version,
                 "manifest_author": parsed_config.manifest_author,
@@ -215,6 +257,7 @@ def parse_trace(trace_file: Path) -> list[dict[str, str]]:
     """Compatibility parser returning raw row dictionaries."""
     parser = NextflowRunParser(trace_file.parent, trace_file.parent)
     parser.trace_file = trace_file
+    parser._trace_cache = None
     return [row.__dict__ for row in parser.parse_trace()]
 
 
@@ -225,7 +268,7 @@ def extract_containers(rows: list[dict[str, str]]) -> list[ContainerRecord]:
         container = row.get("container", "").strip()
         if not container:
             continue
-        name, tag, digest = _split_container(container)
+        name, tag, digest = split_container(container)
         records[container] = ContainerRecord(
             name=name,
             tag=tag,
@@ -239,28 +282,35 @@ def build_context(work_dir: Path, output_dir: Path, pipeline_name: str) -> RunCo
     """Build a run context from parsed Nextflow artifacts."""
     parser = NextflowRunParser(work_dir=work_dir, output_dir=output_dir)
     context = parser.build_run_context()
-    return (
-        context
-        if context.pipeline_name != "unknown-pipeline"
-        else context.__class__(
-            pipeline_name=pipeline_name,
-            executor=context.executor,
-            work_dir=context.work_dir,
-            output_dir=context.output_dir,
-            parameters=context.parameters,
-            artifacts=context.artifacts,
-            metadata=context.metadata,
-        )
+    if context.pipeline_name != "unknown-pipeline":
+        return context
+    return RunContext(
+        pipeline_name=pipeline_name,
+        executor=context.executor,
+        work_dir=context.work_dir,
+        output_dir=context.output_dir,
+        parameters=context.parameters,
+        artifacts=context.artifacts,
+        metadata=context.metadata,
+        project_dir=context.project_dir,
     )
 
 
-def _split_container(ref: str) -> tuple[str, str, str | None]:
-    digest = None
-    if "@sha256:" in ref:
-        ref, digest = ref.split("@sha256:", 1)
-        digest = f"sha256:{digest}"
-    if ":" in ref:
-        name, tag = ref.rsplit(":", 1)
-    else:
-        name, tag = ref, ""
-    return name, tag, digest
+def _first_existing(*candidates: Path) -> Path:
+    for path in candidates:
+        if path.is_file():
+            return path
+    return candidates[0]
+
+
+def _resolve_launch_dir(work_dir: Path) -> Path:
+    if (work_dir / "nextflow.config").is_file() or (work_dir / "trace.txt").is_file():
+        return work_dir
+    parent = work_dir.parent
+    if work_dir.name == "work" and (
+        (parent / "nextflow.config").is_file() or (parent / "main.nf").is_file()
+    ):
+        return parent
+    if (parent / "nextflow.config").is_file() or (parent / "trace.txt").is_file():
+        return parent
+    return work_dir

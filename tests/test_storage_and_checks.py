@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from helios.checks.crypt4gh_output import Crypt4GHOutputCheck
 from helios.checks.vus_rate import VUSRateCheck
 from helios.core.audit_record import AuditRecord
@@ -54,3 +56,5 @@ def test_storage_save_get_list(tmp_path: Path) -> None:
 
     listed = storage.list_records(limit=5, offset=0, pipeline_filter="demo")
     assert listed
+    with pytest.raises(ValueError, match="already exists"):
+        storage.save_record(record)

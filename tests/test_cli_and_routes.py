@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
 from helios.cli import _run_streaming_command, app
-from helios.config import HeliosSettings
+from helios.config import DashboardConfig, HeliosSettings
 from helios.core.audit_record import AuditRecord, CheckResult
 from helios.dashboard.app import create_app
 
@@ -59,6 +59,7 @@ def test_runs_routes_filters_and_delete(tmp_path: Path) -> None:
         audit_db=tmp_path / "api.db",
         signing_key=tmp_path / "none.key",
         dashboard_api_key=api_key,
+        dashboard=DashboardConfig(allow_delete=True, api_key=api_key),
     )
     app_instance = create_app(settings=settings)
     with TestClient(app_instance) as client:
@@ -77,6 +78,7 @@ def test_runs_routes_filters_and_delete(tmp_path: Path) -> None:
             resp = client.post(
                 "/api/v1/runs/import",
                 headers=auth,
+                params={"allow_unsigned": "true"},
                 files={"file": ("record.json", payload, "application/json")},
             )
             assert resp.status_code == 200

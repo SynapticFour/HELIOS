@@ -70,7 +70,7 @@ def test_clinical_access_skips_without_export(tmp_path: Path) -> None:
         output_dir=tmp_path,
     )
     result = ClinicalAccessCheck().run(context)
-    assert result.status == "pass"
+    assert result.status == "skip"
     assert result.evidence.get("skipped") is True
 
 

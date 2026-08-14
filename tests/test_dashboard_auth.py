@@ -47,7 +47,7 @@ def test_extract_api_key_sources() -> None:
     assert extract_api_key(make_request({"authorization": "Bearer tok"})) == "tok"
     basic = b64encode(b"user:basic-secret").decode()
     assert extract_api_key(make_request({"authorization": f"Basic {basic}"})) == "basic-secret"
-    assert extract_api_key(make_request(query="api_key=from-query")) == "from-query"
+    assert extract_api_key(make_request(query="api_key=from-query")) is None
     assert extract_api_key(make_request()) is None
 
 
@@ -73,8 +73,8 @@ def test_api_rejects_missing_and_wrong_key(tmp_path: Path) -> None:
         basic_ok = client.get("/api/v1/runs", headers={"Authorization": f"Basic {basic}"})
         assert basic_ok.status_code == 200
 
-        query_ok = client.get(f"/api/v1/runs?api_key={API_KEY}")
-        assert query_ok.status_code == 200
+        query_rejected = client.get(f"/api/v1/runs?api_key={API_KEY}")
+        assert query_rejected.status_code == 401
 
 
 def test_api_unavailable_without_configured_key(tmp_path: Path) -> None:
