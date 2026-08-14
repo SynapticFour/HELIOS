@@ -93,7 +93,7 @@ jobs:
             helios-lockfile-attestation.json
             requirements.lock
       - name: Attach SBOM to GitHub Release (if release exists for tag)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             helios-sbom.cdx.json
