@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from helios.checks.crypt4gh_output import Crypt4GHOutputCheck
 from helios.checks.vus_rate import VUSRateCheck
 from helios.core.audit_record import AuditRecord
@@ -25,21 +27,33 @@ def test_vus_rate_pass_when_no_variants(tmp_path: Path) -> None:
         artifacts=[empty_vcf],
     )
     result = VUSRateCheck().run(context)
-    assert result.status == "pass"
+    assert result.status == "skip"
 
 
-def test_crypt4gh_output_pass(tmp_path: Path) -> None:
-    encrypted = tmp_path / "result.vcf.c4gh"
-    encrypted.write_text("encrypted", encoding="utf-8")
+def test_crypt4gh_output_requires_magic_bytes(tmp_path: Path) -> None:
+    spoofed = tmp_path / "result.vcf.c4gh"
+    spoofed.write_text("encrypted", encoding="utf-8")
     context = RunContext(
         pipeline_name="test",
         executor="nextflow",
         work_dir=tmp_path,
         output_dir=tmp_path,
-        artifacts=[encrypted],
+        artifacts=[spoofed],
     )
     result = Crypt4GHOutputCheck().run(context)
-    assert result.status in {"pass", "info"}
+    assert result.status == "skip"
+
+    genuine = tmp_path / "result.bam.c4gh"
+    genuine.write_bytes(bytes.fromhex("637279707434676801000000") + b"ciphertext")
+    context = RunContext(
+        pipeline_name="test",
+        executor="nextflow",
+        work_dir=tmp_path,
+        output_dir=tmp_path,
+        artifacts=[genuine],
+    )
+    result = Crypt4GHOutputCheck().run(context)
+    assert result.status == "pass"
 
 
 def test_storage_save_get_list(tmp_path: Path) -> None:
@@ -54,3 +68,5 @@ def test_storage_save_get_list(tmp_path: Path) -> None:
 
     listed = storage.list_records(limit=5, offset=0, pipeline_filter="demo")
     assert listed
+    with pytest.raises(ValueError, match="already exists"):
+        storage.save_record(record)

@@ -7,21 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-- Dashboard API-key authentication (`HELIOS_DASHBOARD_API_KEY`); unauthenticated `/api/v1/*` rejected
-- `RELEASING.md` with `v0.1.0` cut steps and Trusted Publisher precondition
-- Release workflow metadata check for `helios-audit` name/version alignment
+### Breaking
+- Checks are fail-closed: empty container scans, unproven references, suffix-only Crypt4GH, and empty VUS sets no longer pass
+- Skip-only suites grade `N/A` (score `null`), never 100
+- `helios run` and `helios validate` exit 1 on failed checks or untrusted signatures
+- Signing is required unless `--no-sign`; missing keys error instead of silent unsigned store
+- Signature verify uses `trusted_keys_dir` only; embedded PEM is not a trust root
+- `helios key generate` requires `HELIOS_KEY_PASSPHRASE` or `--allow-unencrypted`
+- Empty `checks.enabled` is an error
+- `container_digest_required` defaults to true
+- Dashboard bind in Compose is `127.0.0.1:8765`; UI no longer loads CDN scripts or stores the API key in sessionStorage
+- CLIN-ACCESS-001 verifies the Solum hash chain and fails when there are zero clinical events
 
-## [0.1.0] - 2025-Q2
-
 ### Added
+- Trust-store verification (`trusted_keys_dir`)
+- Import size limit (`dashboard.max_import_bytes`)
+- Command timeout (`command_timeout_seconds`)
+- `requirements.lock` and ADRs under `docs/decisions/`
+- Operator reference (`docs/operator.md`)
+- `make test` / `make lint`
+
+### Security
+- `helios config print` redacts API keys
+- SQLite DB/dir modes 0600/0700 when the process can chmod
+- Gitleaks scans git history; CodeQL runs on PRs; dependency-review is blocking; release runs tests before PyPI
+
+## [0.1.0] — not tagged
+
+Alpha snapshot started 2026-04-15. No Git tag and no PyPI publish exist for this version number. Do not cite it as a released artifact.
+
+### Added (historical)
 - Core audit record model with Ed25519 signing
 - Nextflow trace parser and plugin interface
 - Snakemake integration
 - Five compliance checks: reference_genome, container_pinning, mane_transcripts, vus_rate, crypt4gh_output
 - RO-Crate 1.1 export format
 - PDF compliance report generation
-- EU AI Act Article 11 documentation fragment export
+- Optional EU AI Act Article 11 provenance stub
 - Web dashboard with FastAPI backend and vanilla JS frontend
 - Docker support
-- Full test suite with >80% coverage

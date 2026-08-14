@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
 from helios.cli import _run_streaming_command, app
-from helios.config import HeliosSettings
+from helios.config import DashboardConfig, HeliosSettings
 from helios.core.audit_record import AuditRecord, CheckResult
 from helios.dashboard.app import create_app
 
@@ -18,13 +18,16 @@ def test_cli_config_commands(tmp_path: Path, monkeypatch) -> None:
     cfg.write_text(
         "[helios]\n"
         f'audit_db = "{tmp_path / "audit.db"}"\n'
-        f'signing_key = "{tmp_path / "signing.key"}"\n',
+        f'signing_key = "{tmp_path / "signing.key"}"\n'
+        'dashboard_api_key = "super-secret-dashboard-key"\n',
         encoding="utf-8",
     )
     runner = CliRunner()
     out = runner.invoke(app, ["config", "print", "--path", str(cfg)])
     assert out.exit_code == 0
     assert '"log_level"' in out.stdout
+    assert "super-secret-dashboard-key" not in out.stdout
+    assert "***" in out.stdout
 
     ok = runner.invoke(app, ["config", "validate", "--path", str(cfg)])
     assert ok.exit_code == 0
@@ -35,7 +38,7 @@ def test_cli_streaming_command(monkeypatch, tmp_path: Path) -> None:
         def __init__(self) -> None:
             self.stdout = iter(["line-1\n", "line-2\n"])
 
-        def wait(self) -> int:
+        def wait(self, timeout: float | None = None) -> int:
             return 0
 
     monkeypatch.setattr("helios.cli.subprocess.Popen", lambda *a, **k: _Proc())
@@ -59,6 +62,7 @@ def test_runs_routes_filters_and_delete(tmp_path: Path) -> None:
         audit_db=tmp_path / "api.db",
         signing_key=tmp_path / "none.key",
         dashboard_api_key=api_key,
+        dashboard=DashboardConfig(allow_delete=True, api_key=api_key),
     )
     app_instance = create_app(settings=settings)
     with TestClient(app_instance) as client:
@@ -77,6 +81,7 @@ def test_runs_routes_filters_and_delete(tmp_path: Path) -> None:
             resp = client.post(
                 "/api/v1/runs/import",
                 headers=auth,
+                params={"allow_unsigned": "true"},
                 files={"file": ("record.json", payload, "application/json")},
             )
             assert resp.status_code == 200

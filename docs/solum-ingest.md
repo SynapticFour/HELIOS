@@ -9,7 +9,8 @@
 ## Prerequisites
 
 - Solum audit store with events (sidecar `GET /v1/audit/export` or `solum-core audit export`)
-- HELIOS installed (`pip install -e .` from this repo) with a signing key (`helios key generate` or path in `helios.toml`)
+- HELIOS installed (`pip install -e .` from this repo) with a signing key (`export HELIOS_KEY_PASSPHRASE=... && helios key generate`, or `--allow-unencrypted` for throwaway keys)
+- The matching `helios.pub` must sit in `trusted_keys_dir` (default `~/.helios/keys`) for later `helios validate` / dashboard import
 
 Export format required: **`solum-audit-helios-chain-v1`**.
 
@@ -35,13 +36,14 @@ helios solum-audit \
 make solum-clinical-evidence EXPORT=/tmp/pilot.solum-audit-helios-chain.json
 ```
 
-Report lands under `helios-reports/` (or `export.output_dir` in config). Check `CLIN-ACCESS-001` must be `pass` (not skipped) when the export is valid.
+Report lands under `helios-reports/` (or `export.output_dir` in config). `CLIN-ACCESS-001` is `pass` only when the hash chain verifies **and** at least one clinical-plane event is present. Format-only exports and broken chains fail; `helios solum-audit` then exits **1** and does not sign. Missing signing key is an error unless `--no-sign`.
 
 ---
 
 ## What CLIN-ACCESS-001 does
 
 - Validates `format == solum-audit-helios-chain-v1`
+- Verifies `seq` / `prev_hash` / `hash` (SHA-256 over `seq BE || prev_hash || compact event JSON`)
 - Counts clinical-plane events (`consent.*`, `authorization.*`, `data.encrypt` / `data.decrypt`, `access.*`)
 - Does **not** certify EHDS/GDPR compliance
 
@@ -55,5 +57,6 @@ When `SHOWCASE_ENABLE_SOLUM=1`, Showcase saves the pre-tamper audit export and r
 
 ## Related
 
+- Operator reference: [operator.md](operator.md)
 - Solum [helios.md](https://github.com/SynapticFour/Solum/blob/main/docs/helios.md)
 - Check implementation: `src/helios/checks/clinical_access.py`

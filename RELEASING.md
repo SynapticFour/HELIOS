@@ -21,7 +21,7 @@ Package metadata (must stay aligned):
 3. Version strings match: `pyproject.toml` `version = "0.1.0"` and `src/helios/__init__.py` `__version__ = "0.1.0"`.
 4. **PyPI Trusted Publisher** is configured for this GitHub repository and the `helios-audit` project (OIDC via `pypa/gh-action-pypi-publish` with `id-token: write`). Do **not** push a release tag until that is verified in the PyPI project settings — otherwise the workflow will build but fail to publish.
 5. Optional smoke: locally `python -m build` and confirm `dist/helios_audit-0.1.0-*.whl` / `.tar.gz`.
-6. Release workflow also emits **CycloneDX SBOM** + `helios-lockfile-attestation.json` (org level-up C6).
+6. Release workflow runs tests, then emits CycloneDX SBOM + `requirements.lock` checksums. The JSON sidecar is unsigned provenance, not an in-toto attestation.
 
 Until `v0.1.0` is tagged **and** published, operators install from source (see [README.md](README.md)).
 

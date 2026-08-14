@@ -10,6 +10,7 @@ from typing import Any
 
 from helios.core.audit_record import ContainerRecord
 from helios.core.run_context import RunContext
+from helios.integrations.containers import format_container_ref, split_container
 
 
 @dataclass(slots=True)
@@ -73,7 +74,7 @@ class SnakemakeRunParser:
             container = record.container or ""
             if not container:
                 continue
-            name, tag, digest = _split_container(container)
+            name, tag, digest = split_container(container)
             found[container] = ContainerRecord(
                 name=name,
                 tag=tag,
@@ -90,21 +91,29 @@ class SnakemakeRunParser:
         report_files = [
             path for path in self.snakemake_dir.glob("*.html") if "report" in path.name.lower()
         ]
+        refs = [
+            format_container_ref(item.name, item.tag, item.digest) for item in self.get_containers()
+        ]
         return RunContext(
             pipeline_name="snakemake-pipeline",
             executor="snakemake",
             work_dir=self.snakemake_dir,
             output_dir=self.output_dir,
             artifacts=artifacts,
+            container_refs=refs,
             metadata={
                 "rule_count": str(len(rules)),
                 "log_files": str(log_count),
                 "report_files": ",".join(str(path) for path in report_files),
             },
+            project_dir=self.snakemake_dir,
         )
 
     def _load_metadata_file(self, path: Path) -> dict[str, Any] | None:
-        text = path.read_text(encoding="utf-8", errors="ignore").strip()
+        try:
+            text = path.read_text(encoding="utf-8", errors="strict").strip()
+        except UnicodeDecodeError:
+            return None
         if not text:
             return None
         if path.suffix == ".json":
@@ -135,6 +144,8 @@ def build_context(work_dir: Path, output_dir: Path, pipeline_name: str) -> RunCo
         parameters=context.parameters,
         artifacts=context.artifacts,
         metadata=context.metadata,
+        project_dir=context.project_dir,
+        container_refs=context.container_refs,
     )
 
 
@@ -151,15 +162,3 @@ def _as_optional_str(value: object) -> str | None:
     if value is None:
         return None
     return str(value)
-
-
-def _split_container(ref: str) -> tuple[str, str, str | None]:
-    digest = None
-    if "@sha256:" in ref:
-        ref, digest = ref.split("@sha256:", 1)
-        digest = f"sha256:{digest}"
-    if ":" in ref:
-        name, tag = ref.rsplit(":", 1)
-    else:
-        name, tag = ref, ""
-    return name, tag, digest

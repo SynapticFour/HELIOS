@@ -21,15 +21,15 @@ def test_record_check_standard_map_fallback_from_evidence() -> None:
     )
     mapped = record_check_standard_map("NON-REG", record)
     assert mapped
-    assert mapped[0].startswith("https://bioschemas.org/")
+    assert mapped[0] == "ISO15189"
 
 
 def test_record_check_standard_map_default_when_missing() -> None:
     record = AuditRecord(pipeline_name="x", executor="nextflow", checks=[])
-    assert record_check_standard_map("UNKNOWN", record) == ["https://schema.org/PropertyValue"]
+    assert record_check_standard_map("UNKNOWN", record) == ["PropertyValue"]
 
 
 def test_record_check_standard_map_from_registered_standards() -> None:
     record = AuditRecord(pipeline_name="x", executor="nextflow", checks=[])
     mapped = record_check_standard_map("GA4GH-MANE-001", record)
-    assert any(item.startswith("https://schema.org/") for item in mapped)
+    assert any("ga4gh.org" in item or item.startswith("ACMG") for item in mapped)

@@ -41,7 +41,7 @@ class Crypt4GHOutputCheck(BaseCheck):
         if drs_input and (not genomic_outputs or len(encrypted_files) < len(genomic_outputs)):
             return CheckResult(
                 check_id=self.check_id,
-                status="warn",
+                status="fail",
                 message="DRS inputs detected but outputs are not fully Crypt4GH encrypted.",
                 evidence={
                     "genomic_outputs": [str(path) for path in genomic_outputs],
@@ -81,8 +81,8 @@ class Crypt4GHOutputCheck(BaseCheck):
         )
 
     def _is_crypt4gh_file(self, path: Path) -> bool:
-        if path.suffix == ".c4gh":
-            return True
+        if not path.is_file():
+            return False
         with path.open("rb") as handle:
             header = handle.read(12)
         return header == CRYPT4GH_MAGIC

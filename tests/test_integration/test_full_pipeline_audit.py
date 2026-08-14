@@ -40,11 +40,16 @@ def test_full_pipeline_audit(tmp_path: Path, monkeypatch) -> None:
         encoding="utf-8",
     )
     (work_dir / "nextflow.config").write_text(
-        "manifest { name = 'synthetic' ; version = '0.0.1' ; author = 'test' }\n",
+        (
+            "manifest { name = 'synthetic' ; version = '0.0.1' ; author = 'test' }\n"
+            "process { container = 'docker.io/tool:1.0@sha256:abc' }\n"
+        ),
         encoding="utf-8",
     )
 
-    signing_key, _public_key = generate_keypair(base_dir=tmp_path, name="helios")
+    signing_key, _public_key = generate_keypair(
+        base_dir=tmp_path, name="helios", allow_unencrypted=True
+    )
     db_path = tmp_path / "helios.db"
     reports_dir = tmp_path / "reports"
     config_path = tmp_path / "helios.toml"
@@ -52,6 +57,7 @@ def test_full_pipeline_audit(tmp_path: Path, monkeypatch) -> None:
         (
             "[helios]\n"
             f'signing_key = "{signing_key}"\n'
+            f'trusted_keys_dir = "{tmp_path}"\n'
             f'audit_db = "{db_path}"\n'
             "\n[helios.checks]\n"
             'enabled = ["reference_genome", "container_pinning", "vus_rate"]\n'
@@ -86,6 +92,7 @@ def test_full_pipeline_audit(tmp_path: Path, monkeypatch) -> None:
     assert records, "Expected at least one stored audit record"
     record = records[-1]
     score = CheckRegistry().compute_score(record.checks)
+    assert score.score is not None
     assert score.score > 60
     os.environ["HELIOS_KEY_DIR"] = str(tmp_path)
     assert verify_record(record) is True

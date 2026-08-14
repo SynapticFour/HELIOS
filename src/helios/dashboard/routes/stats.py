@@ -4,28 +4,37 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from datetime import date
-from typing import cast
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
-from helios.checks import CheckRegistry
+from helios.checks import get_check_registry
+from helios.core.audit_record import AuditRecord
 from helios.core.storage import AuditStorage
+from helios.dashboard.deps import get_storage
 from helios.dashboard.models import DateRatePoint, FailingCheckCount, OverviewResponse
 
 router = APIRouter(prefix="/api/v1/stats", tags=["stats"])
 
-
-def _get_storage(request: Request) -> AuditStorage:
-    return cast(AuditStorage, request.app.state.storage)
+STORAGE_DEP = Depends(get_storage)
 
 
-STORAGE_DEP = Depends(_get_storage)
+def _all_records(storage: AuditStorage) -> list[AuditRecord]:
+    records = []
+    offset = 0
+    page = 200
+    while True:
+        batch = storage.list_records(limit=page, offset=offset)
+        if not batch:
+            break
+        records.extend(batch)
+        offset += len(batch)
+    return records
 
 
 @router.get("/overview")
 def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
     """Return high-level dashboard metrics."""
-    records = storage.list_records(limit=1000)
+    records = _all_records(storage)
     if not records:
         return OverviewResponse(
             total_runs=0,
@@ -35,7 +44,12 @@ def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
             mane_adoption_rate=0.0,
             vus_rate_trend=[],
         )
-    scores = [CheckRegistry().compute_score(record.checks).score for record in records]
+    registry = get_check_registry()
+    scores = [
+        score
+        for record in records
+        if (score := registry.compute_score(record.checks).score) is not None
+    ]
     failing = Counter(
         check.check_id for record in records for check in record.checks if check.status == "fail"
     ).most_common(5)
@@ -47,12 +61,15 @@ def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
     vus_trend: dict[date, list[float]] = defaultdict(list)
     for record in records:
         for check in record.checks:
-            if check.check_id == "CLIN-VUS-001":
-                value = float(check.evidence.get("vus_percentage", 0.0))
-                vus_trend[record.start_time.date()].append(value)
+            if check.check_id != "CLIN-VUS-001":
+                continue
+            raw = check.evidence.get("vus_percentage")
+            if raw is None:
+                continue
+            vus_trend[record.start_time.date()].append(float(raw))
     return OverviewResponse(
         total_runs=len(records),
-        avg_score=round(sum(scores) / len(scores), 2),
+        avg_score=round(sum(scores) / len(scores), 2) if scores else 0.0,
         failing_checks_top5=[
             FailingCheckCount(check_id=check_id, count=count) for check_id, count in failing
         ],
@@ -68,10 +85,11 @@ def overview(storage: AuditStorage = STORAGE_DEP) -> OverviewResponse:
 @router.get("/trends")
 def trends(storage: AuditStorage = STORAGE_DEP) -> dict[str, object]:
     """Return compliance score trends grouped by pipeline."""
-    records = storage.list_records(limit=2000)
+    records = _all_records(storage)
+    registry = get_check_registry()
     by_pipeline: dict[str, list[dict[str, object]]] = defaultdict(list)
     for record in records:
-        score = CheckRegistry().compute_score(record.checks).score
+        score = registry.compute_score(record.checks).score
         by_pipeline[record.pipeline_name].append(
             {"date": record.start_time.isoformat(), "score": score}
         )
@@ -80,4 +98,7 @@ def trends(storage: AuditStorage = STORAGE_DEP) -> dict[str, object]:
 
 def _record_has_grch38(record: object) -> bool:
     checks = getattr(record, "checks", [])
-    return any("grch38" in str(getattr(check, "evidence", "")).lower() for check in checks)
+    return any(
+        getattr(check, "check_id", "") == "GA4GH-REF-001" and getattr(check, "status", "") == "pass"
+        for check in checks
+    )

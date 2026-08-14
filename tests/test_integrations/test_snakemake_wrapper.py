@@ -41,17 +41,21 @@ def test_snakemake_parser_metadata_and_wrapper(tmp_path: Path, monkeypatch) -> N
 
     monkeypatch.setattr(
         "helios.integrations.snakemake_wrapper.subprocess.run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=1),
+    )
+    failed = run_wrapped_snakemake(["snakemake", "--cores", "1"], snk_root, out_dir)
+    assert failed == 1
+    monkeypatch.setattr(
+        "helios.integrations.snakemake_wrapper.subprocess.run",
         lambda *args, **kwargs: SimpleNamespace(returncode=0),
     )
-
-    class _Storage:
-        def save_record(self, _record: object) -> None:
-            return None
-
-    monkeypatch.setattr("helios.integrations.snakemake_wrapper.AuditStorage", _Storage)
+    monkeypatch.setattr(
+        "helios.integrations.snakemake_wrapper.persist_record",
+        lambda record, settings, sign=True: record,
+    )
     monkeypatch.setattr(
         "helios.integrations.snakemake_wrapper.CheckRegistry.run_all",
-        lambda _self, _ctx: [],
+        lambda self, ctx, enabled=None, settings=None: [],
     )
     code = run_wrapped_snakemake(["snakemake", "--cores", "1"], snk_root, out_dir)
     assert code == 0

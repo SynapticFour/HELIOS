@@ -11,38 +11,42 @@ from helios import __version__
 from helios.core.audit_record import AuditRecord
 
 
-def export_json(record: AuditRecord, output_path: Path) -> Path:
+def export_json(
+    record: AuditRecord,
+    output_path: Path,
+    *,
+    include_ai_act: bool = False,
+) -> Path:
     """Write audit record JSON report with optional AI Act Article 11 fragment.
 
-    Article 11(1)(a-b) requires system description and intended purpose.
-    Article 11(1)(d-e) requires data governance and technical documentation.
-    Article 11(1)(f) requires traceable post-market audit references.
+    The fragment is included only when ``include_ai_act`` is true (config
+    ``export.ai_act_fragment``). It is engineering orientation, not a risk
+    classification.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = record.model_dump(mode="json")
-    if _includes_ai_components(record):
+    if include_ai_act:
         payload["ai_act_art11_fragment"] = _build_ai_act_art11_fragment(record)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return output_path
 
 
-def _includes_ai_components(record: AuditRecord) -> bool:
-    keywords = {"ai", "ml", "model", "inference", "classifier", "predict"}
-    params_text = " ".join(f"{k} {v}" for k, v in record.parameters.items()).lower()
-    container_text = " ".join(container.name for container in record.containers).lower()
-    return any(term in params_text or term in container_text for term in keywords)
-
-
 def _build_ai_act_art11_fragment(record: AuditRecord) -> dict[str, object]:
-    """Build Article 11 technical documentation fragment for AI-enabled runs."""
+    """Build Article 11 technical documentation fragment when opted in."""
+    intended = record.parameters.get("intended_purpose")
+    if not isinstance(intended, str) or not intended:
+        intended = "Genomic pipeline audit evidence"
     return {
         "schema_version": "EU-AI-ACT-2024/1689-ART11-v1",
-        "system_description": (
-            "HELIOS-audited genomic analysis pipeline with AI-assisted interpretation."
-        ),
-        "intended_purpose": "Clinical genomic variant interpretation",
-        "risk_classification": "high_risk",
+        "system_description": "HELIOS-audited genomic analysis pipeline.",
+        "intended_purpose": intended,
+        "risk_classification": "unspecified",
         "data_governance": {
+            "status": "not_applicable",
+            "note": (
+                "HELIOS does not train or validate ML models. These fields stay "
+                "empty unless the operator supplies them via pipeline parameters."
+            ),
             "training_data_sources": [],
             "validation_data_sources": [],
             "data_quality_measures": [],

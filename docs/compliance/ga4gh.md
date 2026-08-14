@@ -1,16 +1,13 @@
 # GA4GH Standards Coverage
 
-HELIOS aligns pipeline governance artifacts with core GA4GH standards.
+HELIOS checks produce **orientation evidence** for GA4GH-related operational controls. They are not a GA4GH certification.
 
-## Check-to-standard mapping
-
-| HELIOS check/export | GA4GH mapping | Practical evidence |
+| HELIOS check/export | Intended alignment | What is actually proven |
 |---|---|---|
-| `reference_genome` | Refget and GRCh38 migration recommendations | Sequence dictionary source and checksum evidence |
-| `container_pinning` | TES/WES reproducibility expectations | Container digest pinning and immutable execution metadata |
-| `mane_transcripts` | GKS and VRS-aligned reporting semantics | Transcript standardization evidence across variants |
-| `crypt4gh_output` | Crypt4GH 1.0 | Encryption format detection on genomic outputs |
-| `rocrate` export | Cloud Work Stream and WES metadata interoperability | Portable JSON-LD provenance package |
+| `reference_genome` | GRCh38 / Refget-style identity | Header M5/UR against a small built-in GRCh38 MD5 set |
+| `container_pinning` | Reproducible runtimes | Digest pinning of discovered `container` refs; empty scan fails |
+| `mane_transcripts` | Transcript reporting | Fraction of VCF transcript IDs present in a cached NCBI MANE list (gzip + optional MD5 sidecar) |
+| `crypt4gh_output` | Crypt4GH 1.0 | 12-byte magic `crypt4gh\\x01\\x00\\x00\\x00` — suffixes are ignored |
+| `rocrate` export | Portable provenance | RO-Crate 1.1 JSON-LD with canonical standard IRIs where known |
 
-HELIOS therefore supports both run-time compliance checks and export-level interoperability aligned to GA4GH ecosystem expectations.
-
+If a check cannot measure the property it names, it **fails or skips**. It does not pass.

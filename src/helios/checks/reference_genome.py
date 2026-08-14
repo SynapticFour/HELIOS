@@ -33,7 +33,7 @@ class ReferenceGenomeCheck(BaseCheck):
         if not bam_like:
             return CheckResult(
                 check_id=self.check_id,
-                status="warn",
+                status="fail",
                 message="No BAM/CRAM artifact found for reference validation.",
                 evidence={},
             )
@@ -41,28 +41,42 @@ class ReferenceGenomeCheck(BaseCheck):
         path = bam_like[0]
         header_dict = self._read_header(path)
         sq_entries = header_dict.get("SQ", [])
-        sn_values = [entry.get("SN", "") for entry in sq_entries]
-        joined = ",".join(sn_values).lower()
+        joined = ",".join(
+            f"{entry.get('SN', '')}|{entry.get('UR', '')}|{entry.get('M5', '')}"
+            for entry in sq_entries
+        ).lower()
 
-        has_chr_prefix = any(sn.startswith("chr") for sn in sn_values)
-        has_numeric = any(sn in {"1", "22"} for sn in sn_values)
-        mentions_grch38 = "grch38" in joined or "hg38" in joined
         mentions_grch37 = "grch37" in joined or "hg19" in joined
-
+        required = self.settings.checks.reference_genome_required if self.settings else "GRCh38"
+        measured: dict[str, str] = {}
+        for entry in sq_entries:
+            sn = str(entry.get("SN", ""))
+            md5 = str(entry.get("M5", ""))
+            if sn and md5:
+                measured[sn] = md5
         evidence = {
             "artifact": str(path),
-            "known_md5_chr1": KNOWN_GRCH38_MD5["chr1"],
-            "known_md5_chr22": KNOWN_GRCH38_MD5["chr22"],
+            "required_assembly": required,
+            "measured_md5_chr1": measured.get("chr1") or measured.get("1") or "",
+            "measured_md5_chr22": measured.get("chr22") or measured.get("22") or "",
         }
 
         for entry in sq_entries:
             source = f"{entry.get('UR', '')}|{entry.get('M5', '')}".lower()
             if "grch38" in source or entry.get("M5") in KNOWN_GRCH38_MD5.values():
                 evidence["header_source_match"] = source
+                evidence["assembly"] = "GRCh38"
+                if required.upper() not in {"GRCH38", "HG38"} and required.lower() not in source:
+                    return CheckResult(
+                        check_id=self.check_id,
+                        status="fail",
+                        message=(f"Header matches GRCh38 but required assembly is {required}."),
+                        evidence=evidence,
+                    )
                 return CheckResult(
                     check_id=self.check_id,
                     status="pass",
-                    message="GRCh38 evidence found in sequence dictionary metadata.",
+                    message=f"{required} evidence found in sequence dictionary metadata.",
                     evidence=evidence,
                 )
 
@@ -74,31 +88,10 @@ class ReferenceGenomeCheck(BaseCheck):
                 evidence=evidence,
             )
 
-        has_source_fields = any("UR" in entry or "M5" in entry for entry in sq_entries)
-        if mentions_grch38 or (has_chr_prefix and has_numeric):
-            if has_source_fields:
-                return CheckResult(
-                    check_id=self.check_id,
-                    status="warn",
-                    message=(
-                        "Reference naming resembles GRCh38/hg38, "
-                        "but UR/M5 fields did not match known GRCh38 sources."
-                    ),
-                    evidence=evidence,
-                )
-            return CheckResult(
-                check_id=self.check_id,
-                status="warn",
-                message=(
-                    "Reference naming is compatible with GRCh38/hg38 but lacks UR/M5 provenance."
-                ),
-                evidence=evidence,
-            )
-
         return CheckResult(
             check_id=self.check_id,
-            status="warn",
-            message="Reference assembly ambiguous; unable to prove GRCh38 usage.",
+            status="fail",
+            message="Reference assembly not proven; UR/M5 did not match known GRCh38 sources.",
             evidence=evidence,
         )
 
@@ -117,5 +110,5 @@ class ReferenceGenomeCheck(BaseCheck):
                 header["SQ"].append(parsed)
             return header
 
-        with pysam.AlignmentFile(str(path), "r") as alignment:
+        with pysam.AlignmentFile(str(path), "rb") as alignment:
             return alignment.header.to_dict()

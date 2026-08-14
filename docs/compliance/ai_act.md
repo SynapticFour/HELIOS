@@ -1,21 +1,11 @@
 # EU AI Act (Articles 10 & 11) Mapping
 
-HELIOS contributes to documentation obligations for high-risk genomics AI workflows and produces machine-verifiable technical records suitable for regulated quality systems.
+HELIOS is **not** an AI system under the AI Act. The optional `ai_act_art11_fragment` is a provenance stub for labs that already run high-risk genomics models **beside** HELIOS.
 
-## Article mapping
+## What is emitted
 
-- **Article 10 (Data governance):**
-  - `ai_act_art11_fragment.data_governance` documents training/validation data sources and quality measures.
-  - Audit-level provenance records preserve file lineage and quality-control evidence.
-- **Article 11 (Technical documentation):**
-  - `ai_act_art11_fragment` provides a structured technical dossier block aligned to Article 11 requirements.
-  - HELIOS report exports include software versions, containers, and validation metrics.
-- **Article 12 (Record-keeping):**
-  - Ed25519-signed `AuditRecord` artifacts are tamper-evident and verifiable.
-- **Article 13 (Transparency):**
-  - RO-Crate export includes interoperable provenance metadata for downstream review.
+- `risk_classification` is always `"unspecified"` unless you change the exporter. HELIOS will not label a pipeline high-risk.
+- `data_governance.training_data_sources` / `validation_data_sources` / `data_quality_measures` are empty unless the operator puts values in pipeline parameters. HELIOS does not invent training-data lineage.
+- `audit_trail_reference` points at the signed `AuditRecord` (run id, payload hash, signer fingerprint).
 
-## Timeline note
-
-For MDR/IVDR-related high-risk systems, key AI Act obligations are expected to apply from **August 2027**. HELIOS records can be generated now to establish continuous evidence trails ahead of enforcement milestones.
-
+Do not attach this fragment to an AI Act dossier as if it were Article 10/11 documentation. It is a pointer to pipeline evidence, nothing more.

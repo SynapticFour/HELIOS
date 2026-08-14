@@ -12,7 +12,7 @@ class RunListItem(BaseModel):
     pipeline_name: str
     executor: str
     start_time: str
-    score: int
+    score: int | None
     status: str
 
 

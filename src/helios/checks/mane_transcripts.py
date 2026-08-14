@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -10,6 +11,8 @@ from pathlib import Path
 import httpx
 
 from helios.checks.base import BaseCheck
+from helios.checks.vcf_io import iter_info_fields, vcf_artifacts
+from helios.config import HeliosSettings
 from helios.core.audit_record import CheckResult
 from helios.core.run_context import RunContext
 
@@ -27,15 +30,27 @@ class MANETranscriptCheck(BaseCheck):
     severity = "warning"
     standards = ["ACMG-2023-reporting", "GA4GH-GKS-1.0"]
 
-    def __init__(self, cache_dir: Path | None = None, ttl_days: int = 7) -> None:
-        self.cache_dir = cache_dir or Path("~/.helios/cache/mane").expanduser()
+    def __init__(
+        self,
+        cache_dir: Path | None = None,
+        ttl_days: int = 7,
+        settings: HeliosSettings | None = None,
+    ) -> None:
+        super().__init__(settings=settings)
+        if cache_dir is not None:
+            self.cache_dir = cache_dir
+        elif settings is not None:
+            self.cache_dir = settings.cache_dir / "mane"
+        else:
+            self.cache_dir = Path("~/.helios/cache/mane").expanduser()
         self.ttl_days = ttl_days
+        checks = settings.checks if settings is not None else None
+        self.pass_threshold = checks.mane_pass_threshold if checks else 0.90
+        self.warn_threshold = checks.mane_warn_threshold if checks else 0.50
 
     def run(self, context: RunContext) -> CheckResult:
         """Run transcript coverage check using MANE summary list."""
-        vcfs = [
-            p for p in context.artifacts if p.suffix in {".vcf", ".gz"} and "vcf" in p.name.lower()
-        ]
+        vcfs = vcf_artifacts(context)
         if not vcfs:
             return CheckResult(
                 check_id=self.check_id,
@@ -49,10 +64,8 @@ class MANETranscriptCheck(BaseCheck):
         mane_annotated = 0
         non_mane_seen: list[str] = []
         for vcf in vcfs:
-            for line in vcf.read_text(encoding="utf-8").splitlines():
-                if not line or line.startswith("#"):
-                    continue
-                transcripts = self._extract_transcript_ids(line)
+            for info in iter_info_fields(vcf):
+                transcripts = self._extract_transcript_ids(info)
                 if not transcripts:
                     continue
                 total_variants += 1
@@ -79,15 +92,17 @@ class MANETranscriptCheck(BaseCheck):
             "mane_annotated": mane_annotated,
             "non_mane_transcripts": sorted(set(non_mane_seen))[:10],
             "mane_version": mane_version,
+            "pass_threshold": self.pass_threshold,
+            "warn_threshold": self.warn_threshold,
         }
-        if ratio >= 0.9:
+        if ratio >= self.pass_threshold:
             return CheckResult(
                 check_id=self.check_id,
                 status="pass",
                 message=f"MANE transcript usage {ratio:.1%} meets threshold.",
                 evidence=evidence,
             )
-        if ratio >= 0.5:
+        if ratio >= self.warn_threshold:
             return CheckResult(
                 check_id=self.check_id,
                 status="warn",
@@ -101,8 +116,7 @@ class MANETranscriptCheck(BaseCheck):
             evidence=evidence,
         )
 
-    def _extract_transcript_ids(self, vcf_line: str) -> list[str]:
-        info_field = vcf_line.split("\t", maxsplit=8)[7] if "\t" in vcf_line else ""
+    def _extract_transcript_ids(self, info_field: str) -> list[str]:
         annotations: list[str] = []
         for token in info_field.split(";"):
             if token.startswith("ANN=") or token.startswith("CSQ="):
@@ -143,26 +157,36 @@ class MANETranscriptCheck(BaseCheck):
                 )
             filename = match.group(0)
             content = client.get(f"{MANE_BASE_URL}{filename}").content
+            sidecar = client.get(f"{MANE_BASE_URL}{filename}.md5")
+        if not content.startswith(b"\x1f\x8b"):
+            raise RuntimeError(f"MANE download {filename} is not gzip-compressed.")
+        digest = hashlib.sha256(content).hexdigest()
+        if sidecar.status_code == 200:
+            listed = sidecar.text.split()[0].strip().lower()
+            md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+            if listed and listed != md5:
+                raise RuntimeError(
+                    f"MANE download {filename} failed MD5 sidecar check "
+                    f"(got {md5}, listed {listed})."
+                )
         path = self.cache_dir / filename
         path.write_bytes(content)
+        (path.with_suffix(path.suffix + ".sha256")).write_text(digest + "\n", encoding="utf-8")
         return path
 
     def _parse_mane_file(self, path: Path) -> set[str]:
         transcripts: set[str] = set()
         with gzip.open(path, "rt", encoding="utf-8") as handle:
-            reader = handle.read().splitlines()
-        for line in reader[1:]:
-            cols = line.split("\t")
-            if len(cols) < 6:
-                continue
-            for candidate in cols:
-                if candidate.startswith("NM_") or candidate.startswith("ENST"):
-                    transcripts.add(candidate.split(".")[0])
+            next(handle, None)
+            for line in handle:
+                cols = line.split("\t")
+                if len(cols) < 6:
+                    continue
+                for candidate in cols:
+                    if candidate.startswith("NM_") or candidate.startswith("ENST"):
+                        transcripts.add(candidate.split(".")[0])
         return transcripts
 
     def _version_from_name(self, filename: str) -> str:
         match = re.search(r"(v[0-9.]+)", filename)
         return match.group(1) if match else "unknown"
-
-
-ManeTranscriptCheck = MANETranscriptCheck

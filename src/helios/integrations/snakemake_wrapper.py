@@ -7,26 +7,46 @@ import sys
 from pathlib import Path
 
 from helios.checks import CheckRegistry
+from helios.config import load_config
 from helios.core.audit_record import AuditRecord
-from helios.core.storage import AuditStorage
+from helios.core.persist import hash_files, persist_record
 from helios.integrations.snakemake import SnakemakeRunParser
 
 
 def run_wrapped_snakemake(command: list[str], work_dir: Path, output_dir: Path) -> int:
-    """Execute Snakemake command and persist a HELIOS audit record."""
-    process = subprocess.run(command, cwd=work_dir)
+    """Execute Snakemake command and persist a HELIOS audit record on success."""
+    settings = load_config()
+    try:
+        process = subprocess.run(
+            command,
+            cwd=work_dir,
+            timeout=settings.command_timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return 124
+    if process.returncode != 0:
+        return process.returncode
     parser = SnakemakeRunParser(snakemake_dir=work_dir, output_dir=output_dir)
     context = parser.build_run_context()
-    checks = CheckRegistry().run_all(context)
+    registry = CheckRegistry()
+    enabled = registry.resolve_enabled(settings.checks.enabled)
+    checks = registry.run_all(context, enabled=enabled, settings=settings)
     record = AuditRecord(
         pipeline_name=context.pipeline_name,
         executor="snakemake",
         containers=parser.get_containers(),
         parameters={"wrapped_command": command},
         checks=checks,
+        input_files=hash_files([]),
+        output_files=hash_files(context.artifacts),
+        work_dir=str(work_dir),
+        output_dir=str(output_dir),
     )
-    AuditStorage().save_record(record)
-    return process.returncode
+    persist_record(record, settings, sign=True)
+    if any(check.status == "fail" for check in checks):
+        return 1
+    return 0
 
 
 def main() -> None:

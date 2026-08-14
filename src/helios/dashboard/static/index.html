@@ -4,14 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HELIOS Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root { --bg:#0f1117; --panel:#171a23; --panel-2:#1d2230; --line:#2a3042; --text:#e7edf8; --muted:#9aa7bd; --accent:#00d4aa; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;}
-    body { margin:0; background:var(--bg); color:var(--text); font-family:"DM Sans",sans-serif;}
-    .mono { font-family:"JetBrains Mono",monospace; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:ui-sans-serif,system-ui,sans-serif;}
+    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
     header { padding:16px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;}
     a { color:var(--accent); text-decoration:none; }
     nav a { margin-right:14px; }
@@ -46,19 +42,17 @@
 
   <script type="module">
     const app = document.getElementById("app");
-    const KEY_STORAGE = "helios_dashboard_api_key";
+    let apiKeyMemory = "";
 
     function getApiKey() {
-      let key = sessionStorage.getItem(KEY_STORAGE);
-      if (!key) {
-        key = window.prompt("Enter HELIOS dashboard API key (HELIOS_DASHBOARD_API_KEY):", "");
-        if (key) sessionStorage.setItem(KEY_STORAGE, key);
+      if (!apiKeyMemory) {
+        apiKeyMemory = window.prompt("Enter HELIOS dashboard API key (HELIOS_DASHBOARD_API_KEY):", "") || "";
       }
-      return key || "";
+      return apiKeyMemory;
     }
 
     function clearApiKey() {
-      sessionStorage.removeItem(KEY_STORAGE);
+      apiKeyMemory = "";
     }
 
     function authHeaders() {
@@ -66,11 +60,30 @@
       return key ? { "X-API-Key": key } : {};
     }
 
-    function authedUrl(path) {
-      const key = getApiKey();
-      const u = new URL(path, location.origin);
-      if (key) u.searchParams.set("api_key", key);
-      return u.pathname + u.search;
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[ch]));
+    }
+
+    async function download(path, filename) {
+      const response = await fetch(path, { headers: authHeaders() });
+      if (response.status === 401) {
+        clearApiKey();
+        throw new Error("Unauthorized — check HELIOS_DASHBOARD_API_KEY");
+      }
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
     }
 
     const api = (path) => fetch(path, { headers: authHeaders() }).then(async r => {
@@ -81,11 +94,11 @@
       if (!r.ok) throw new Error((await r.json()).detail || "Request failed");
       return r.json();
     });
-    const scoreBadge = (score) => score >= 80 ? "g" : score >= 60 ? "y" : "r";
+    const scoreBadge = (score) => score == null ? "y" : score >= 80 ? "g" : score >= 60 ? "y" : "r";
     const truncate = (v, n=10) => v.length > n ? `${v.slice(0, n)}...` : v;
     const loading = (msg="Loading...") => `<div class="panel">${msg}</div>`;
     const empty = (msg="No runs yet.") => `<div class="panel muted">${msg}</div>`;
-    const err = (e) => `<div class="panel"><span class="r badge">ERROR</span> ${e.message}</div>`;
+    const err = (e) => `<div class="panel"><span class="r badge">ERROR</span> ${esc(e.message)}</div>`;
 
     async function renderOverview() {
       app.innerHTML = loading("Loading run overview...");
@@ -116,12 +129,12 @@
         const drawRows = (items) => {
           if (!items.length) { body.innerHTML = `<tr><td colspan="6" class="muted">No matching runs.</td></tr>`; return; }
           body.innerHTML = items.map(run => `<tr>
-            <td class="mono">${truncate(run.run_id, 12)}</td>
-            <td>${run.pipeline_name}</td>
-            <td>${new Date(run.start_time).toLocaleString()}</td>
-            <td><span class="badge ${scoreBadge(run.score)}">${run.score}</span></td>
-            <td>${run.status}</td>
-            <td><a href="#/run/${run.run_id}">View</a></td>
+            <td class="mono">${esc(truncate(run.run_id, 12))}</td>
+            <td>${esc(run.pipeline_name)}</td>
+            <td>${esc(new Date(run.start_time).toLocaleString())}</td>
+            <td><span class="badge ${scoreBadge(run.score)}">${esc(run.score == null ? "n/a" : run.score)}</span></td>
+            <td>${esc(run.status)}</td>
+            <td><a href="#/run/${encodeURIComponent(run.run_id)}">View</a></td>
           </tr>`).join("");
         };
         drawRows(runs);
@@ -147,14 +160,14 @@
         const [run, score] = await Promise.all([api(`/api/v1/runs/${runId}`), api(`/api/v1/runs/${runId}/score`)]);
         app.innerHTML = `
           <section class="panel">
-            <h2 class="mono">${run.run_id}</h2>
-            <div class="muted">${run.pipeline_name} · ${run.executor} · ${new Date(run.start_time).toLocaleString()}</div>
+            <h2 class="mono">${esc(run.run_id)}</h2>
+            <div class="muted">${esc(run.pipeline_name)} · ${esc(run.executor)} · ${esc(new Date(run.start_time).toLocaleString())}</div>
             <svg width="180" height="180" viewBox="0 0 120 120">
               <circle cx="60" cy="60" r="44" stroke="#2a3042" stroke-width="10" fill="none"></circle>
               <circle cx="60" cy="60" r="44" stroke="var(--accent)" stroke-width="10" fill="none"
                 stroke-dasharray="${2.764*score.score} 276.4" transform="rotate(-90 60 60)"></circle>
               <text x="60" y="55" text-anchor="middle" class="mono" fill="white" font-size="16">${score.grade}</text>
-              <text x="60" y="74" text-anchor="middle" class="mono" fill="#9aa7bd" font-size="10">${score.score}</text>
+              <text x="60" y="74" text-anchor="middle" class="mono" fill="#9aa7bd" font-size="10">${score.score == null ? "n/a" : score.score}</text>
             </svg>
           </section>
           <section class="panel">
@@ -171,21 +184,21 @@
           </section>`;
         const tc = document.getElementById("tab-checks");
         tc.innerHTML = `<table><thead><tr><th>ID</th><th>Status</th><th>Message</th><th>Evidence</th></tr></thead><tbody>${
-          run.checks.map(c=>`<tr><td class="mono">${c.check_id}</td><td><span class="badge ${c.status==='fail'?'r':c.status==='warn'?'y':'g'}">${c.status}</span></td><td>${c.message}</td><td><details><summary>View</summary><pre class="mono">${JSON.stringify(c.evidence,null,2)}</pre></details></td></tr>`).join("")
+          run.checks.map(c=>`<tr><td class="mono">${esc(c.check_id)}</td><td><span class="badge ${c.status==='fail'?'r':c.status==='warn'?'y':'g'}">${esc(c.status)}</span></td><td>${esc(c.message)}</td><td><details><summary>View</summary><pre class="mono">${esc(JSON.stringify(c.evidence,null,2))}</pre></details></td></tr>`).join("")
         }</tbody></table>`;
         document.getElementById("tab-files").innerHTML = `<table><thead><tr><th>Type</th><th>Path</th><th>Hash</th><th>Size</th></tr></thead><tbody>${
           [...run.input_files.map(f=>({...f,t:"input"})),...run.output_files.map(f=>({...f,t:"output"}))]
-          .map(f=>`<tr><td>${f.t}</td><td>${f.path}</td><td class="mono">${f.sha256.slice(0,8)}...${f.sha256.slice(-8)}</td><td>${f.size_bytes}</td></tr>`).join("")
+          .map(f=>`<tr><td>${esc(f.t)}</td><td>${esc(f.path)}</td><td class="mono">${esc(f.sha256.slice(0,8))}...${esc(f.sha256.slice(-8))}</td><td>${esc(f.size_bytes)}</td></tr>`).join("")
         }</tbody></table>`;
         document.getElementById("tab-containers").innerHTML = `<table><thead><tr><th>Name</th><th>Tag</th><th>Pinned</th></tr></thead><tbody>${
-          run.containers.map(c=>`<tr><td>${c.name}</td><td>${c.tag}</td><td>${c.pinned ? "✅":"⚠️"}</td></tr>`).join("")
+          run.containers.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.tag)}</td><td>${c.pinned ? "yes":"no"}</td></tr>`).join("")
         }</tbody></table>`;
         document.getElementById("tab-export").innerHTML = `
           <div class="row">
-            <a href="${authedUrl(`/api/v1/reports/${runId}/json`)}"><button>JSON</button></a>
-            <a href="${authedUrl(`/api/v1/reports/${runId}/pdf`)}"><button>PDF</button></a>
-            <a href="${authedUrl(`/api/v1/reports/${runId}/rocrate`)}"><button>RO-Crate</button></a>
-            <a href="${authedUrl(`/api/v1/reports/${runId}/ai-act`)}"><button>AI Act</button></a>
+            <button type="button" id="dl-json">JSON</button>
+            <button type="button" id="dl-pdf">PDF</button>
+            <button type="button" id="dl-rocrate">RO-Crate</button>
+            <button type="button" id="dl-aiact">AI Act</button>
           </div>`;
         document.querySelectorAll(".tabs button").forEach(btn=>btn.onclick = () => {
           document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
@@ -193,6 +206,10 @@
           ["checks","files","containers","export"].forEach(t => document.getElementById(`tab-${t}`).classList.add("hidden"));
           document.getElementById(`tab-${btn.dataset.tab}`).classList.remove("hidden");
         });
+        document.getElementById("dl-json").onclick = () => download(`/api/v1/reports/${runId}/json`, `${runId}.json`);
+        document.getElementById("dl-pdf").onclick = () => download(`/api/v1/reports/${runId}/pdf`, `${runId}.pdf`);
+        document.getElementById("dl-rocrate").onclick = () => download(`/api/v1/reports/${runId}/rocrate`, `${runId}-rocrate.zip`);
+        document.getElementById("dl-aiact").onclick = () => download(`/api/v1/reports/${runId}/ai-act`, `${runId}-ai-act.json`);
       } catch (e) { app.innerHTML = err(e); }
     }
 
@@ -201,13 +218,21 @@
       try {
         const [overview, trends] = await Promise.all([api("/api/v1/stats/overview"), api("/api/v1/stats/trends")]);
         app.innerHTML = `<div class="panel"><h2>Analytics</h2>
-          <canvas id="line"></canvas><canvas id="bar"></canvas><canvas id="donut"></canvas>
+          <p class="muted">Totals from the audit database (no third-party chart libraries).</p>
+          <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
+            <tr><td>Total runs</td><td>${esc(overview.total_runs)}</td></tr>
+            <tr><td>Average score</td><td>${esc(overview.avg_score)}</td></tr>
+            <tr><td>GRCh38 adoption %</td><td>${esc(overview.grch38_adoption_rate)}</td></tr>
+            <tr><td>MANE adoption %</td><td>${esc(overview.mane_adoption_rate)}</td></tr>
+          </tbody></table>
+          <h3>Failing checks</h3>
+          <table><thead><tr><th>Check</th><th>Count</th></tr></thead><tbody>${
+            overview.failing_checks_top5.map(x=>`<tr><td>${esc(x.check_id)}</td><td>${esc(x.count)}</td></tr>`).join("") || `<tr><td colspan="2" class="muted">None</td></tr>`
+          }</tbody></table>
+          <h3>Pipelines</h3>
           <table><thead><tr><th>Pipeline</th><th>Points</th></tr></thead><tbody>${
-            Object.entries(trends.pipelines).map(([k,v])=>`<tr><td>${k}</td><td>${v.length}</td></tr>`).join("")
+            Object.entries(trends.pipelines).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v.length)}</td></tr>`).join("")
           }</tbody></table></div>`;
-        new Chart(document.getElementById("line"), { type:"line", data:{ labels:overview.vus_rate_trend.map(x=>x.date), datasets:[{label:"VUS Rate",data:overview.vus_rate_trend.map(x=>x.rate),borderColor:"#00d4aa"}]}});
-        new Chart(document.getElementById("bar"), { type:"bar", data:{ labels:overview.failing_checks_top5.map(x=>x.check_id), datasets:[{label:"Failures",data:overview.failing_checks_top5.map(x=>x.count),backgroundColor:"#ef4444"}]}});
-        new Chart(document.getElementById("donut"), { type:"doughnut", data:{ labels:["GRCh38","Other"], datasets:[{data:[overview.grch38_adoption_rate,100-overview.grch38_adoption_rate], backgroundColor:["#00d4aa","#2a3042"]}] }});
       } catch (e) { app.innerHTML = err(e); }
     }
 

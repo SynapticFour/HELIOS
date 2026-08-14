@@ -12,7 +12,7 @@ from starlette.responses import JSONResponse, Response
 
 
 def extract_api_key(request: Request) -> str | None:
-    """Extract an API key from header, Bearer token, Basic auth, or query param."""
+    """Extract an API key from X-API-Key, Bearer, or HTTP Basic password."""
     header_key = request.headers.get("x-api-key")
     if header_key:
         return header_key
@@ -31,10 +31,6 @@ def extract_api_key(request: Request) -> str | None:
             _username, sep, password = decoded.partition(":")
             if sep:
                 return password
-
-    query_key = request.query_params.get("api_key")
-    if query_key:
-        return query_key
     return None
 
 
@@ -67,7 +63,13 @@ class DashboardAuthMiddleware(BaseHTTPMiddleware):
             )
 
         provided = extract_api_key(request)
-        if provided is None or not secrets.compare_digest(provided, expected):
+        if provided is None or len(provided) != len(expected):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Unauthorized. Provide a valid API key."},
+                headers={"WWW-Authenticate": 'Bearer realm="HELIOS Dashboard"'},
+            )
+        if not secrets.compare_digest(provided, expected):
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Unauthorized. Provide a valid API key."},
