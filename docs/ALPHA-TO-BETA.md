@@ -16,7 +16,7 @@ HELIOS is the **shared signed evidence surface** for the commercial spine. It is
 | 2 | Evidence Pack field → auditor/ethics question map published (non-cert) | See Showcase `docs/for-customers/evidence-pack-auditor-map.md` |
 | 3 | Threat model + IR runbook current | **Done** |
 | 4 | SBOM / lockfile on release path | **Partial** — CycloneDX SBOM + `requirements.lock` checksums. The JSON “attestation” is unsigned provenance, not in-toto. |
-| 5 | `v0.1.0` tagged **and** published to PyPI via Trusted Publisher | **Open** (operator — RELEASING.md) |
+| 5 | `v0.1.0` tagged **and** published to PyPI | **Done** — https://pypi.org/project/helios-audit/0.1.0/ (token upload; Trusted Publisher still recommended for later tags) |
 | 6 | README Status badge flipped Alpha → Beta only after 1–5 | **Blocked on 5** |
 
 ## Explicitly not required for Beta

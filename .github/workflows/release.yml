@@ -2,7 +2,7 @@ name: Release
 
 # Publishes helios-audit to PyPI when an annotated tag matching v* is pushed.
 # Requires PyPI Trusted Publisher for this repo + project name helios-audit.
-# See RELEASING.md — do not push v0.1.0 until Trusted Publisher is configured.
+# See RELEASING.md — v0.1.0 is tagged; re-run publish after Trusted Publisher.
 
 on:
   push:
@@ -32,6 +32,8 @@ jobs:
         run: mypy src/helios/
       - name: Pytest
         run: pytest tests/ -q --cov=helios --cov-fail-under=80
+      - name: Prove (sign/tamper)
+        run: make prove
 
   publish:
     needs: test

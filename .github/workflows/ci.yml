@@ -35,6 +35,10 @@ jobs:
         run: mypy src/helios/
       - name: Pytest
         run: pytest tests/ -v --tb=short --cov=helios --cov-report=term-missing --cov-fail-under=80
+      # Same command as a clone + `make prove`: subset tests without the
+      # coverage gate, then sign/tamper on a fixture chain.
+      - name: Prove (sign/tamper)
+        run: make prove
       - name: Upload coverage
         uses: codecov/codecov-action@v7
         with:

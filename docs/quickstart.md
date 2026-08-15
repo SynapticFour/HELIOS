@@ -2,15 +2,19 @@
 
 ## 1) Install
 
-HELIOS is **alpha**. Install from source until `v0.1.0` is tagged and published; afterward `pip install helios-audit` works (see [RELEASING.md](../RELEASING.md)).
+HELIOS is **alpha**. Install from PyPI (see [RELEASING.md](../RELEASING.md)):
+
+```bash
+pip install helios-audit
+```
+
+From a clone:
 
 ```bash
 git clone https://github.com/SynapticFour/HELIOS.git
 cd HELIOS
 pip install -e .
 ```
-
-Or: `pip install "git+https://github.com/SynapticFour/HELIOS.git"`
 
 HELIOS produces technical audit evidence; it is not a certification or legal determination.
 

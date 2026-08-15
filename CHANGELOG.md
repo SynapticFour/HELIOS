@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- CI and Release test jobs run `make prove` (sign/tamper; no coverage gate on the subset).
+- `docs/PROVE.md`: the 80 % coverage gate is `make test`, not `make prove`.
+- `helios-audit` **0.1.0** is on PyPI (`pip install helios-audit`). Later tags should use a Trusted Publisher so GitHub Actions can publish without an API token.
+
+## [0.1.0] - 2026-08-15
+
+First tagged release of `helios-audit`. Technical audit evidence only — not certification.
+
 ### Breaking
 - Checks are fail-closed: empty container scans, unproven references, suffix-only Crypt4GH, and empty VUS sets no longer pass
 - Skip-only suites grade `N/A` (score `null`), never 100
@@ -20,29 +30,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLIN-ACCESS-001 verifies the Solum hash chain and fails when there are zero clinical events
 
 ### Added
+- `make prove` — unit tests plus a sign/tamper round-trip on a fixture chain (`--no-cov` so the coverage gate does not apply to the subset)
 - Trust-store verification (`trusted_keys_dir`)
 - Import size limit (`dashboard.max_import_bytes`)
 - Command timeout (`command_timeout_seconds`)
 - `requirements.lock` and ADRs under `docs/decisions/`
 - Operator reference (`docs/operator.md`)
 - `make test` / `make lint`
-
-### Security
-- `helios config print` redacts API keys
-- SQLite DB/dir modes 0600/0700 when the process can chmod
-- Gitleaks scans git history; CodeQL runs on PRs; dependency-review is blocking; release runs tests before PyPI
-
-## [0.1.0] — not tagged
-
-Alpha snapshot started 2026-04-15. No Git tag and no PyPI publish exist for this version number. Do not cite it as a released artifact.
-
-### Added (historical)
 - Core audit record model with Ed25519 signing
 - Nextflow trace parser and plugin interface
 - Snakemake integration
-- Five compliance checks: reference_genome, container_pinning, mane_transcripts, vus_rate, crypt4gh_output
+- Compliance checks: reference_genome, container_pinning, mane_transcripts, vus_rate, crypt4gh_output
 - RO-Crate 1.1 export format
 - PDF compliance report generation
 - Optional EU AI Act Article 11 provenance stub
 - Web dashboard with FastAPI backend and vanilla JS frontend
 - Docker support
+
+### Security
+- `helios config print` redacts API keys
+- SQLite DB/dir modes 0600/0700 when the process can chmod
+- Gitleaks scans git history; CodeQL runs on PRs; dependency-review is blocking; release runs tests before PyPI

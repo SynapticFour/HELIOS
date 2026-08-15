@@ -8,7 +8,7 @@
 |_| |_|_____|_____|___\___/|____/
 ```
 
-**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval. Alpha→Beta exit: [`docs/ALPHA-TO-BETA.md`](docs/ALPHA-TO-BETA.md).
+**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval. Alpha→Beta exit: [`docs/ALPHA-TO-BETA.md`](docs/ALPHA-TO-BETA.md). Zero-risk proof (no pipeline): [`docs/PROVE.md`](docs/PROVE.md) (`make prove`).
 
 Genomics Pipeline Audit & Validation Framework for signed, reproducible compliance evidence.
 
@@ -29,19 +29,15 @@ HELIOS wraps pipeline execution, records run context, runs fail-closed complianc
 
 ## Install
 
-The package name is `helios-audit`. **Until `v0.1.0` is tagged and published to PyPI, install from source.** After that release, `pip install helios-audit` works. See [`RELEASING.md`](RELEASING.md) for the operator tag steps (Trusted Publisher must be configured first).
+The package name is `helios-audit`. **`v0.1.0` is on PyPI:** [helios-audit 0.1.0](https://pypi.org/project/helios-audit/0.1.0/). See [`RELEASING.md`](RELEASING.md).
 
 ```bash
-# editable install from a clone (current recommended path)
+pip install helios-audit
+
+# editable install from a clone
 git clone https://github.com/SynapticFour/HELIOS.git
 cd HELIOS
 pip install -e .
-
-# or one-shot from GitHub
-pip install "git+https://github.com/SynapticFour/HELIOS.git"
-
-# after v0.1.0 is on PyPI:
-# pip install helios-audit
 ```
 
 Development extras: `pip install -e ".[dev]"` (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).

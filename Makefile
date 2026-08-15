@@ -1,6 +1,6 @@
 # HELIOS — Synaptic Four unified local lifecycle
 
-.PHONY: help install up down destroy dashboard logs solum-clinical-evidence test lint fmt
+.PHONY: help install up down destroy dashboard logs solum-clinical-evidence test lint fmt prove
 
 help:
 	@echo "HELIOS — local lifecycle"
@@ -13,6 +13,7 @@ help:
 	@echo "  make down        Stop dashboard; keep volumes"
 	@echo "  make destroy     Stop dashboard; remove volumes"
 	@echo "  make solum-clinical-evidence EXPORT=path.json"
+	@echo "  make prove       Integrity proof (no pipeline): tests + sign/tamper"
 	@echo ""
 	@echo "Dashboard auth: export HELIOS_DASHBOARD_API_KEY=\$$(openssl rand -hex 32)"
 	@echo "Signing keys:   export HELIOS_KEY_PASSPHRASE=... && helios key generate"
@@ -31,6 +32,13 @@ test: lint
 fmt:
 	ruff check --fix src/ tests/
 	ruff format src/ tests/
+
+# Zero-risk customer path: no Nextflow, no Ferrum. See docs/PROVE.md
+# Subset tests: disable the repo-wide 80% coverage gate (that is `make test`).
+prove:
+	pytest tests/test_checks/test_clinical_access.py tests/test_signer.py -q --tb=short --no-cov
+	chmod +x scripts/prove.sh
+	./scripts/prove.sh
 
 up: dashboard
 
