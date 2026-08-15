@@ -8,7 +8,7 @@
 |_| |_|_____|_____|___\___/|____/
 ```
 
-**Status: Alpha** — early development. HELIOS produces technical audit evidence for genomics pipelines. It is **not** a certification, accreditation, legal determination, or regulatory approval. Alpha→Beta exit: [`docs/ALPHA-TO-BETA.md`](docs/ALPHA-TO-BETA.md). Zero-risk proof (no pipeline): [`docs/PROVE.md`](docs/PROVE.md) (`make prove`).
+**Free Apache-2.0 ambassador** — not a Synaptic Four product SKU. HELIOS produces technical audit evidence for genomics pipelines. It does **not** call Ferrum or Solum APIs (Solum is file ingest). It is **not** a certification, accreditation, legal determination, or regulatory approval. Alpha→Beta: [`docs/ALPHA-TO-BETA.md`](docs/ALPHA-TO-BETA.md). Zero-risk proof: [`docs/PROVE.md`](docs/PROVE.md) (`make prove`).
 
 Genomics Pipeline Audit & Validation Framework for signed, reproducible compliance evidence.
 
