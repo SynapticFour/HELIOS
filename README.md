@@ -70,7 +70,20 @@ CLI equivalent: `HELIOS_DASHBOARD_API_KEY=... helios serve`. Pass the key as `X-
 
 ## Documentation
 
-See [`docs/index.md`](docs/index.md). Operator reference (config, env, exit codes, trust store): [`docs/operator.md`](docs/operator.md). Solum clinical ingest: [`docs/solum-ingest.md`](docs/solum-ingest.md) (`helios solum-audit` / `make solum-clinical-evidence`). Release process: [`RELEASING.md`](RELEASING.md).
+See [`docs/index.md`](docs/index.md). Operator reference (config, env, exit codes, trust store): [`docs/operator.md`](docs/operator.md). Release process: [`RELEASING.md`](RELEASING.md).
+
+### Solum audit file (one JSON, one command)
+
+Solum writes a HELIOS-oriented export; HELIOS **ingests the file** (no Solum HTTP).
+
+```bash
+pip install helios-audit
+make prove                 # signs a generated fixture and rejects tamper
+# against a real Solum export:
+# helios solum-audit --export /path/to/solum-audit-helios-chain-v1.json
+```
+
+Details: [`docs/solum-ingest.md`](docs/solum-ingest.md) · [`docs/PROVE.md`](docs/PROVE.md).
 
 ## CI, Security, and Governance
 
@@ -124,3 +137,7 @@ Apache 2.0. See [`LICENSE`](LICENSE).
 ## Important Notice
 
 HELIOS is alpha software. It provides technical quality and compliance evidence support. It is not, by itself, a certification decision, legal determination, or regulatory approval.
+
+---
+
+**Synaptic Four** · [contact@synapticfour.com](mailto:contact@synapticfour.com) · [synapticfour.com](https://synapticfour.com) · Apache-2.0 (free)

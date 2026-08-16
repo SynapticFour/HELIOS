@@ -44,9 +44,9 @@
   <table>
     <thead><tr><th>Standard Family</th><th>Required</th><th>Checked</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td>ISO 15189:2022</td><td>Yes</td><td>Yes</td><td>{{ "Met" if score.failed == 0 else "Partial" }}</td></tr>
-      <tr><td>GA4GH standards</td><td>Yes</td><td>Yes</td><td>{{ "Met" if score.failed == 0 else "Partial" }}</td></tr>
-      <tr><td>EU AI Act</td><td>Contextual</td><td>Yes</td><td>Documented</td></tr>
+      <tr><td>ISO 15189:2022</td><td>Yes</td><td>Yes</td><td>{{ "Evidence mapped (not accreditation)" if score.failed == 0 else "Partial mapping" }}</td></tr>
+      <tr><td>GA4GH standards</td><td>Yes</td><td>Yes</td><td>{{ "Evidence mapped (not certification)" if score.failed == 0 else "Partial mapping" }}</td></tr>
+      <tr><td>EU AI Act</td><td>Contextual</td><td>Yes</td><td>Provenance stub (not Art. 10/11 certification)</td></tr>
     </tbody>
   </table>
 
