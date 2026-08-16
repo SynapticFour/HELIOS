@@ -47,7 +47,7 @@ Verification **never** trusts the PEM embedded in a report. It loads `*.pub` fro
 | `trusted_keys_dir` | `~/.helios/keys` | `*.pub` trust store |
 | `audit_db` | `~/.helios/helios.db` | SQLite; parent `0700`, file `0600` when chmod works |
 | `command_timeout_seconds` | `86400` | Wrapped pipeline timeout (exit 124) |
-| `checks.enabled` | reference, container, MANE, VUS, crypt4gh | Must be non-empty |
+| `checks.enabled` | reference, container, MANE, VUS, crypt4gh, ferrum_wes_outputs | Must be non-empty |
 | `checks.container_digest_required` | `true` | Tag without `@sha256:` fails |
 | `checks.vus_warn_threshold` / `vus_fail_threshold` | `0.40` / `0.70` | Fraction, not percent |
 | `export.include_rocrate` | `false` | Also emit RO-Crate beside JSON/PDF |
@@ -69,6 +69,7 @@ If a check cannot prove the named property, it **fails or skips**. Skip is exclu
 | `GA4GH-REF-001` | BAM/CRAM `@SQ` UR/M5 matches known GRCh38 MD5s. No artifact → fail |
 | `GA4GH-MANE-001` | VCF transcript IDs vs cached NCBI MANE list |
 | `CLIN-ACCESS-001` | Solum `solum-audit-helios-chain-v1` hash chain verifies **and** ≥1 clinical-plane event |
+| `GA4GH-WES-DRS-001` | Ferrum WES outputs are DRS ids (`ferrum_wes_outputs` / `wes_output_drs_ids`). No WES context → skip. Local files alone fail when WES is claimed |
 
 `helios run` and `helios validate` exit **1** if any enabled check fails. Failed wrapped Nextflow/Snakemake commands are **not** signed.
 

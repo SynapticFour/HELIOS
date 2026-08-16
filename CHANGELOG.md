@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **GA4GH-WES-DRS-001** (`ferrum_wes_outputs`) — when a Ferrum WES run is in context, outputs must be DRS ids (`drs://…` or `drs.`). Local BAM/VCF hashes alone fail. No WES context → skip. Default `helios.toml.example` enables it. HELIOS still does not call Ferrum.
+
 ### Changed
 
 - CI and Release test jobs run `make prove` (sign/tamper; no coverage gate on the subset).

@@ -10,7 +10,7 @@ command_timeout_seconds = 86400
 
 [helios.checks]
 # Empty list is rejected. Name every check that should run.
-enabled = ["reference_genome", "container_pinning", "mane_transcripts", "vus_rate", "crypt4gh_output"]
+enabled = ["reference_genome", "container_pinning", "mane_transcripts", "vus_rate", "crypt4gh_output", "ferrum_wes_outputs"]
 reference_genome_required = "GRCh38"
 mane_pass_threshold = 0.90
 mane_warn_threshold = 0.50

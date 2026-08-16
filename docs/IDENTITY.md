@@ -2,7 +2,7 @@
 
 HELIOS (`helios-audit` on PyPI) is a **free Apache-2.0 ambassador**: signed, reproducible evidence for genomics pipeline runs (Nextflow/Snakemake artefacts). It is **not** a Synaptic Four product SKU.
 
-It does **not** orchestrate Ferrum or Solum. Solum is **file ingest** (`helios solum-audit`). Ferrum WES artefacts are hashed as `helios run` inputs.
+It does **not** orchestrate Ferrum or Solum. Solum is **file ingest** (`helios solum-audit`). Ferrum WES artefacts: set metadata `ferrum_wes_outputs` / `wes_output_drs_ids` to `drs://…` ids so check **GA4GH-WES-DRS-001** can pass. Local file hashes alone are not a Ferrum join.
 
 ## Audience
 

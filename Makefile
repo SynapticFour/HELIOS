@@ -36,7 +36,7 @@ fmt:
 # Zero-risk customer path: no Nextflow, no Ferrum. See docs/PROVE.md
 # Subset tests: disable the repo-wide 80% coverage gate (that is `make test`).
 prove:
-	pytest tests/test_checks/test_clinical_access.py tests/test_signer.py -q --tb=short --no-cov
+	pytest tests/test_checks/test_clinical_access.py tests/test_signer.py tests/test_ferrum_wes_outputs.py -q --tb=short --no-cov
 	chmod +x scripts/prove.sh
 	./scripts/prove.sh
 

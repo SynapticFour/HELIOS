@@ -34,7 +34,7 @@ API routes under `/api/v1/*` require the key (`X-API-Key` or Bearer). `/health` 
 helios init
 ```
 
-This copies `helios.toml.example`. Empty `checks.enabled` is rejected — name the checks to run. Full key list: [operator.md](operator.md).
+This copies `helios.toml.example`. Empty `checks.enabled` is rejected — name the checks to run. Default example includes `ferrum_wes_outputs` (GA4GH-WES-DRS-001): Ferrum WES outputs must be DRS ids. HELIOS does not call Ferrum. Full key list: [operator.md](operator.md).
 
 ## 3) Generate signing keys
 

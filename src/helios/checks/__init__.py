@@ -25,6 +25,7 @@ CHECK_ALIASES: dict[str, str] = {
     "vus_rate": "CLIN-VUS-001",
     "crypt4gh_output": "GA4GH-CRYPT-001",
     "clinical_access": "CLIN-ACCESS-001",
+    "ferrum_wes_outputs": "GA4GH-WES-DRS-001",
 }
 
 Grade = Literal["A", "B", "C", "D", "F", "N/A"]

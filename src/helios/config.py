@@ -22,6 +22,7 @@ class ChecksConfig(BaseModel):
             "mane_transcripts",
             "vus_rate",
             "crypt4gh_output",
+            "ferrum_wes_outputs",
         ]
     )
     reference_genome_required: str = "GRCh38"

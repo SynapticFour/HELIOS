@@ -8,6 +8,7 @@ HELIOS checks produce **orientation evidence** for GA4GH-related operational con
 | `container_pinning` | Reproducible runtimes | Digest pinning of discovered `container` refs; empty scan fails |
 | `mane_transcripts` | Transcript reporting | Fraction of VCF transcript IDs present in a cached NCBI MANE list (gzip + optional MD5 sidecar) |
 | `crypt4gh_output` | Crypt4GH 1.0 | 12-byte magic `crypt4gh\\x01\\x00\\x00\\x00` — suffixes are ignored |
+| `ferrum_wes_outputs` | GA4GH WES 1.1 + DRS 1.2 | When WES is in context, outputs must be Ferrum DRS ids (`drs://` or `drs.`). HELIOS does not call Ferrum |
 | `rocrate` export | Portable provenance | RO-Crate 1.1 JSON-LD with canonical standard IRIs where known |
 
 If a check cannot measure the property it names, it **fails or skips**. It does not pass.
