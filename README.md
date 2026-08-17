@@ -29,15 +29,14 @@ HELIOS wraps pipeline execution, records run context, runs fail-closed complianc
 
 ## Install
 
-The package name is `helios-audit`. **`v0.1.0` is on PyPI:** [helios-audit 0.1.0](https://pypi.org/project/helios-audit/0.1.0/). See [`RELEASING.md`](RELEASING.md).
+The package name is `helios-audit`. **PyPI has `0.1.0`.** HEAD on this repo is **ahead of PyPI** (WES DRS-id check, honesty mapping). For the code on `main`, install from git — do not assume `pip install helios-audit` equals this tree.
 
 ```bash
-pip install helios-audit
+# PyPI (tag v0.1.0)
+pip install helios-audit==0.1.0
 
-# editable install from a clone
-git clone https://github.com/SynapticFour/HELIOS.git
-cd HELIOS
-pip install -e .
+# Current ambassador tree (this repo)
+pip install "git+https://github.com/SynapticFour/HELIOS.git"
 ```
 
 Development extras: `pip install -e ".[dev]"` (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
@@ -77,7 +76,7 @@ See [`docs/index.md`](docs/index.md). Operator reference (config, env, exit code
 Solum writes a HELIOS-oriented export; HELIOS **ingests the file** (no Solum HTTP).
 
 ```bash
-pip install helios-audit
+pip install "git+https://github.com/SynapticFour/HELIOS.git"
 make prove                 # signs a generated fixture and rejects tamper
 # against a real Solum export:
 # helios solum-audit --export /path/to/solum-audit-helios-chain-v1.json

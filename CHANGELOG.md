@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- README: **PyPI `helios-audit==0.1.0` trails git HEAD**. Install from git for current ambassador code. Not a certification.
+
 ### Added
 
 - **GA4GH-WES-DRS-001** (`ferrum_wes_outputs`) — when a Ferrum WES run is in context, outputs must be DRS ids (`drs://…` or `drs.`). Local BAM/VCF hashes alone fail. No WES context → skip. Default `helios.toml.example` enables it. HELIOS still does not call Ferrum.
