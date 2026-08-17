@@ -7,19 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-17
+
+PyPI catch-up: `helios-audit==0.1.1` matches git tag `v0.1.1`. Later `main` may be ahead.
+
 ### Changed
-
-- README: **PyPI `helios-audit==0.1.0` trails git HEAD**. Install from git for current ambassador code. Not a certification.
-
-### Added
 
 - **GA4GH-WES-DRS-001** (`ferrum_wes_outputs`) — when a Ferrum WES run is in context, outputs must be DRS ids (`drs://…` or `drs.`). Local BAM/VCF hashes alone fail. No WES context → skip. Default `helios.toml.example` enables it. HELIOS still does not call Ferrum.
-
-### Changed
-
 - CI and Release test jobs run `make prove` (sign/tamper; no coverage gate on the subset).
 - `docs/PROVE.md`: the 80 % coverage gate is `make test`, not `make prove`.
-- `helios-audit` **0.1.0** is on PyPI (`pip install helios-audit`). Later tags should use a Trusted Publisher so GitHub Actions can publish without an API token.
 
 ## [0.1.0] - 2026-08-15
 

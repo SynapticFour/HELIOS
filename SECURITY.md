@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Security fixes are provided for the latest published tag. Until `v0.1.0` exists, treat `main` as the only supported line.
+Security fixes are provided for the latest published tag (`v0.1.1`). Treat `main` as ahead of the tag when they diverge.
 
 ## Reporting a Vulnerability
 

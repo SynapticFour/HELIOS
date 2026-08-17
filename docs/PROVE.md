@@ -24,4 +24,4 @@ That is HELIOS as a product. Optional joins:
 | A Solum sidecar export | `helios solum-audit --export file.json` |
 | Ferrum WES artefacts | Hash them as `helios run` inputs — HELIOS does not call Ferrum APIs |
 
-HELIOS is Apache-2.0. Install with `pip install helios-audit` ([helios-audit 0.1.0](https://pypi.org/project/helios-audit/0.1.0/); [RELEASING.md](../RELEASING.md)). Results are technical evidence, not certification.
+HELIOS is Apache-2.0. Install with `pip install helios-audit==0.1.1` ([helios-audit 0.1.1](https://pypi.org/project/helios-audit/0.1.1/); [RELEASING.md](../RELEASING.md)). Results are technical evidence, not certification.

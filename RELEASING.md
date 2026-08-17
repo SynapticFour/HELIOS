@@ -9,7 +9,7 @@ Package metadata (must stay aligned):
 | PyPI / project name | `helios-audit` (`pyproject.toml` `[project].name`) |
 | Import package | `helios` |
 | Console script | `helios` |
-| Current version | `0.1.0` (`pyproject.toml` and `helios.__version__`) |
+| Current version | `0.1.1` (`pyproject.toml` and `helios.__version__`) |
 | Python | `>=3.11` |
 | Build backend | `hatchling` |
 | Publish workflow | [`.github/workflows/release.yml`](.github/workflows/release.yml) on tag `v*` |

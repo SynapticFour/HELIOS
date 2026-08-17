@@ -1,6 +1,6 @@
 # HELIOS Documentation
 
-**Maturity: Early access** (alpha toward beta). HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow and Snakemake runs to generate signed, reproducible compliance evidence. **`helios-audit` v0.1.0 is on PyPI** — `pip install helios-audit` (see [quickstart](quickstart.md) and [RELEASING.md](../RELEASING.md)). HEAD on this repo is ahead of PyPI. HELIOS is **not** a certification, not an orchestrator of Ferrum or Solum, and not a Synaptic Four product SKU (free Apache-2.0 ambassador). Evaluator snapshot: [FOR-EVALUATORS.md](FOR-EVALUATORS.md).
+**Maturity: Early access** (alpha toward beta). HELIOS is a Genomics Pipeline Audit & Validation Framework that wraps Nextflow and Snakemake runs to generate signed, reproducible compliance evidence. **`helios-audit` v0.1.1 is on PyPI** — `pip install helios-audit==0.1.1` (see [quickstart](quickstart.md) and [RELEASING.md](../RELEASING.md)). Later `main` commits may be ahead of that tag. HELIOS is **not** a certification, not an orchestrator of Ferrum or Solum, and not a Synaptic Four product SKU (free Apache-2.0 ambassador). Evaluator snapshot: [FOR-EVALUATORS.md](FOR-EVALUATORS.md).
 
 - Start with the [quickstart](quickstart.md)
 - **Operator reference** (config, env, CLI, exit codes, trust store): [operator.md](operator.md)

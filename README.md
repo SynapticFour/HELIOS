@@ -15,7 +15,7 @@ These ten public repositories are from the same organisation and can be composed
 
 ## Quick start
 
-The package name is `helios-audit`. **PyPI has `0.1.0`.** HEAD on this repo is **ahead of PyPI** (WES DRS-id check, honesty mapping). For the code on `main`, install from git — do not assume `pip install helios-audit` equals this tree.
+The package name is `helios-audit`. **PyPI has `0.1.1`** (git tag `v0.1.1`). Later commits on `main` may be ahead of that tag. `pip install helios-audit==0.1.1` matches the tag, not necessarily HEAD.
 
 ```bash
 pip install -e ".[dev]"
