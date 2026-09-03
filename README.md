@@ -1,6 +1,6 @@
 # HELIOS
 
-**Apache-2.0 ambassador** — not a Synaptic Four product SKU. HELIOS produces technical audit evidence for genomics pipelines. It **reads export JSON from disk**; it does **not** call other product APIs and does **not** orchestrate them. It is **not** a certification, accreditation, legal determination, or regulatory approval.
+**Apache-2.0 ambassador** — not a Synaptic Four product SKU. HELIOS produces technical audit evidence for genomics pipelines. It **reads export JSON from disk**; it does **not** call other product APIs and does **not** orchestrate them. It is **not** a certification, accreditation, legal determination, or regulatory approval. It is **not** [Helix](https://github.com/SynapticFour/Helix) / [HelixTest](https://github.com/SynapticFour/HelixTest) (API conformance). Split: [Helix vs HELIOS](https://github.com/SynapticFour/Helix/blob/main/docs/HELIX_VS_HELIOS.md).
 
 **Maturity: Early access.** Alpha→Beta: [`docs/ALPHA-TO-BETA.md`](docs/ALPHA-TO-BETA.md).
 

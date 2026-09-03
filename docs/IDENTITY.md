@@ -8,7 +8,7 @@ It does **not** orchestrate Ferrum or Solum. Solum is **file ingest** (`helios s
 
 Labs that want machine-verifiable pipeline evidence. Anyone — including non-customers.
 
-**Not for:** running DRS/WES (Ferrum), issuing Passports (ga4gh-infra), clinical consent (Solum), a researcher UI (BRA).
+**Not for:** running DRS/WES (Ferrum), issuing Passports (ga4gh-infra), clinical consent (Solum), a researcher UI (BRA), GA4GH API conformance (that is [HelixTest](https://github.com/SynapticFour/HelixTest) / the [Helix](https://github.com/SynapticFour/Helix) VERIFY brand — not this repo).
 
 ## Standalone
 

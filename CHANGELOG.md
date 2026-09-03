@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- README / IDENTITY: Helix/HelixTest are the VERIFY/conformance tools. HELIOS stays evidence/reproducibility. Pointer: https://github.com/SynapticFour/Helix/blob/main/docs/HELIX_VS_HELIOS.md
+
 ## [0.1.1] - 2026-08-17
 
 PyPI catch-up: `helios-audit==0.1.1` matches git tag `v0.1.1`. Later `main` may be ahead.
