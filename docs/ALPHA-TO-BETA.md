@@ -27,4 +27,4 @@ HELIOS is the **shared signed evidence surface** for the commercial spine. It is
 
 ## When Beta is declared
 
-Update README badge, website HELIOS copy if needed, and [`RELEASE-FROZEN-SCORECARD.md`](https://github.com/SynapticFour/synapticfour-business/blob/main/strategy/org-level-up/RELEASE-FROZEN-SCORECARD.md).
+Update README badge, website HELIOS copy if needed, and the internal founder release-frozen scorecard (private; not a public GitHub artefact).
