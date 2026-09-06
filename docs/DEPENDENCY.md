@@ -1,4 +1,4 @@
-# Dependency care (ambassador)
+# Dependency care
 
 Dependabot and Renovate are **off by choice**. Pin care is:
 

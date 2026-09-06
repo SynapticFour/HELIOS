@@ -4,7 +4,7 @@ Factual snapshot of this repository. Not a sales brief. Not legal advice. Not a 
 
 ## Maturity
 
-**Early access.** Apache-2.0 ambassador — not a Synaptic Four product SKU. Alpha→Beta notes: [ALPHA-TO-BETA.md](ALPHA-TO-BETA.md).
+**Early access.** Apache-2.0. Alpha→Beta notes: [ALPHA-TO-BETA.md](ALPHA-TO-BETA.md).
 
 HELIOS **reads export JSON from disk**. It does **not** call Ferrum or Solum APIs and does **not** orchestrate those products.
 
