@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+Proposed tag `v0.1.2`. Not created.
+
+### Added
+
+- `helios solum-audit --output-dir` overrides `export.output_dir` for that run. A failed `CLIN-ACCESS-001` exits 1 before a signature is written.
+- `helios publish-report` copies the newest report into a chosen directory only when the signature verifies and the file does not contain the dashboard API key. `/api/v1` stays authenticated. [ADR 0003](docs/decisions/0003-static-signed-report.md).
+- GHCR image publish on `v*` tags and `workflow_dispatch` only (linux/amd64, SBOM, 15 minute cap).
+
 ### Changed
 
 - README / IDENTITY: Helix/HelixTest are the VERIFY/conformance tools. HELIOS stays evidence/reproducibility. Pointer: https://github.com/SynapticFour/Helix/blob/main/docs/HELIX_VS_HELIOS.md

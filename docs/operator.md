@@ -1,6 +1,6 @@
 # Operator reference
 
-How to run HELIOS so the output is actually evidence: fail-closed checks, a trust store, and non-zero exits on failure. Architecture: [architecture.md](architecture.md). Decisions: [0001](decisions/0001-fail-closed-evidence.md), [0002](decisions/0002-trust-store.md).
+How to run HELIOS so the output is actually evidence: fail-closed checks, a trust store, and non-zero exits on failure. Architecture: [architecture.md](architecture.md). Decisions: [0001](decisions/0001-fail-closed-evidence.md), [0002](decisions/0002-trust-store.md), [0003](decisions/0003-static-signed-report.md).
 
 HELIOS is **not** a certification.
 
@@ -16,6 +16,7 @@ helios key generate
 - Private key: `~/.helios/keys/helios.key` (mode `0600`, directory `0700`)
 - Public key: `~/.helios/keys/helios.pub` — this is the trust-store entry
 - Without a passphrase, generation refuses unless you pass `--allow-unencrypted` (throwaway/dev only)
+- A public demonstration uses its own key, not a production key. The passphrase is `HELIOS_KEY_PASSPHRASE`. Visitors verify with that key's `*.pub` in the trust store.
 
 Verification **never** trusts the PEM embedded in a report. It loads `*.pub` from `trusted_keys_dir` (default `~/.helios/keys`, overridable with `HELIOS_KEY_DIR`). To accept another lab’s signed JSON, install their `.pub` into that directory first.
 
@@ -83,7 +84,8 @@ If a check cannot prove the named property, it **fails or skips**. Skip is exclu
 | `helios validate <run-id>` | Verify signature against the trust store, re-run checks on stored paths. Exit 1 on bad sig or check fail |
 | `helios key generate` | Requires passphrase or `--allow-unencrypted` |
 | `helios config print` | Effective config with secrets redacted |
-| `helios solum-audit --export …` | CLIN-ACCESS-001 + sign; exit 1 on check fail |
+| `helios solum-audit --export …` | CLIN-ACCESS-001 + sign; `--output-dir` overrides the report directory; exit 1 on check fail writes no signature |
+| `helios publish-report` | Opt-in copy of the newest signed report into a static directory. Unsigned, untrusted, or API-key-bearing files are refused. Does not open `/api/v1` |
 | `helios snakemake-wrap -- …` | Audits **only** if Snakemake exits 0 |
 | `helios serve` | Requires `HELIOS_DASHBOARD_API_KEY`. Compose publishes `127.0.0.1:8765` |
 
