@@ -7,13 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-Proposed tag `v0.1.2`. Not created.
+## [0.1.2] - 2026-10-03
 
 ### Added
 
 - `helios solum-audit --output-dir` overrides `export.output_dir` for that run. A failed `CLIN-ACCESS-001` exits 1 before a signature is written.
 - `helios publish-report` copies the newest report into a chosen directory only when the signature verifies and the file does not contain the dashboard API key. `/api/v1` stays authenticated. [ADR 0003](docs/decisions/0003-static-signed-report.md).
 - GHCR image publish on `v*` tags and `workflow_dispatch` only (linux/amd64, SBOM, 15 minute cap).
+- `make verify-release` is the local gate before a tag. Push to `main` and pull requests run the secret scan and dependency review. Product CI and CodeQL are `workflow_dispatch`. A `v*` tag runs the PyPI release and the GHCR image publish.
+
+### Security
+
+- **WeasyPrint 70.0** — PYSEC-2026-3940 / CVE-2026-55073. Versions before 70.0 could bypass a restrictive `url_fetcher` through `xmp_metadata` or `stylesheets` passed to `write_pdf`. `requirements.lock` now pins 70.0. PDF export is an optional extra; the dashboard API key is still not written into a published report.
 
 ### Changed
 
