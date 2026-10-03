@@ -61,7 +61,8 @@ Then confirm the Release workflow, the PyPI project page, and `pip install helio
 
 1. Bump `version` in `pyproject.toml` and `__version__` in `src/helios/__init__.py`.
 2. Update `CHANGELOG.md`.
-3. Tag `vX.Y.Z` and `git push origin vX.Y.Z`.
+3. Run `make verify-release` on the commit you will tag. Product CI does not run on push to `main` or on pull requests. Dispatch [`.github/workflows/ci.yml`](.github/workflows/ci.yml) or CodeQL from [docs/CI.md](docs/CI.md) when you want those jobs on a runner. A `v*` tag starts `release.yml` (PyPI) and `docker-release.yml` (GHCR).
+4. Tag `vX.Y.Z` and `git push origin vX.Y.Z`.
 
 ## Versioning rules
 
