@@ -7,7 +7,7 @@ RUN python -m pip install --upgrade pip build && python -m build
 
 FROM python:3.12-slim
 WORKDIR /app
-COPY --from=builder /app/dist/*.whl /tmp/helios.whl
-RUN python -m pip install --no-cache-dir /tmp/helios.whl && rm -f /tmp/helios.whl
+COPY --from=builder /app/dist/*.whl /tmp/
+RUN python -m pip install --no-cache-dir /tmp/helios_audit-*.whl && rm -f /tmp/helios_audit-*.whl
 EXPOSE 8765
 CMD ["helios", "serve", "--host", "0.0.0.0"]

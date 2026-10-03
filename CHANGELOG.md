@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- The GHCR image installs `helios_audit-*.whl` under its real filename. `pip` rejects a renamed `helios.whl`. The owner in the image tag is lowercased.
+
 ## [0.1.2] - 2026-10-03
 
 ### Added
