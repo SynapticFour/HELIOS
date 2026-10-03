@@ -202,11 +202,21 @@ def solum_audit(
     config: Annotated[Path | None, typer.Option("--config", "-c")] = None,
     no_sign: Annotated[bool, typer.Option("--no-sign")] = False,
     export_format: Annotated[str | None, typer.Option("--export-format")] = None,
+    output_dir: Annotated[
+        Path | None,
+        typer.Option("--output-dir", help="Override export.output_dir for this command"),
+    ] = None,
 ) -> None:
     """Ingest a Solum clinical audit export, run CLIN-ACCESS-001, sign, and export."""
     if not export.is_file():
         raise typer.BadParameter(f"export not found: {export}")
     settings = load_config(_settings_path(config))
+    if output_dir is not None:
+        settings = settings.model_copy(
+            update={
+                "export": settings.export.model_copy(update={"output_dir": output_dir}),
+            }
+        )
     logging.basicConfig(level=settings.log_level.upper())
     start_time = datetime.now(UTC)
 
@@ -234,6 +244,16 @@ def solum_audit(
         work_dir=str(export.parent),
         output_dir=str(export.parent),
     )
+    clin = next((c for c in checks if c.check_id == "CLIN-ACCESS-001"), None)
+    if clin is not None and clin.status == "fail":
+        console.print(
+            Panel(
+                f"CLIN-ACCESS-001: fail — {clin.message}\nNo signature written.",
+                title="Solum clinical evidence",
+                border_style="red",
+            )
+        )
+        raise typer.Exit(code=1)
     try:
         record = persist_record(record, settings, sign=not no_sign)
     except SigningRequiredError as exc:
@@ -243,7 +263,6 @@ def solum_audit(
     format_name = export_format or settings.export.default_format
     report_path = _export_record(record, format_name, settings)
     score = registry.compute_score(record.checks)
-    clin = next((c for c in checks if c.check_id == "CLIN-ACCESS-001"), None)
     console.print(
         Panel(
             f"Report: {report_path}\n"
@@ -442,6 +461,61 @@ def config_validate(path: Path | None = None) -> None:
     except (ValidationError, FileNotFoundError, OSError, ValueError) as exc:
         console.print(f"[red]Configuration invalid:[/red] {exc}")
         raise typer.Exit(code=1) from exc
+
+
+class PublishRefused(Exception):
+    """A report must not be copied to the public directory."""
+
+
+def select_latest_signed_report(
+    reports_dir: Path,
+    trusted_keys_dir: Path,
+    api_key: str | None,
+) -> tuple[Path, str]:
+    """Pick the newest JSON report that verifies and does not contain the API key."""
+    files = sorted(
+        (path for path in reports_dir.glob("*.json") if path.is_file()),
+        key=lambda path: path.stat().st_mtime,
+    )
+    if not files:
+        raise PublishRefused(f"no JSON reports in {reports_dir}")
+    latest = files[-1]
+    text = latest.read_text(encoding="utf-8")
+    if api_key and api_key in text:
+        raise PublishRefused("report contains the dashboard API key")
+    try:
+        record = AuditRecord.model_validate_json(text)
+    except ValidationError as exc:
+        raise PublishRefused("report is not a HELIOS audit record") from exc
+    if record.signature is None or not record.verify_signature(trusted_keys_dir=trusted_keys_dir):
+        raise PublishRefused("unsigned or untrusted report refused")
+    return latest, text
+
+
+@app.command("publish-report")
+def publish_report(
+    reports_dir: Annotated[Path, typer.Option("--reports-dir")] = Path("./helios-reports"),
+    dest: Annotated[Path, typer.Option("--dest")] = Path("./helios-public"),
+    config: Annotated[Path | None, typer.Option("--config", "-c")] = None,
+) -> None:
+    """Copy the latest signed report into a static directory. Unsigned reports are refused.
+
+    This does not open /api/v1 and does not write the dashboard API key.
+    """
+    settings = load_config(_settings_path(config))
+    try:
+        source, text = select_latest_signed_report(
+            reports_dir,
+            settings.trusted_keys_dir,
+            settings.dashboard_api_key,
+        )
+    except PublishRefused as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    dest.mkdir(parents=True, exist_ok=True)
+    target = dest / source.name
+    target.write_text(text, encoding="utf-8")
+    console.print(f"Published {target}")
 
 
 def _export_record(record: AuditRecord, format_name: str, settings: HeliosSettings) -> Path:
