@@ -71,7 +71,7 @@ Per `RELEASING.md`:
 
 ## Continuity
 
-HELIOS is maintained by a single steward (Synaptic Four). To reduce dependence on any one person, the build is documented from a clean machine in this file, the release steps are written down, and the source can be inspected and built without access to Synaptic Four systems (clean-room check dated 2026-10; Python ≥ 3.11 and network access to PyPI for a first install). Operational details such as accounts, publication rights and escrow arrangements are kept in a non-public continuity plan. If you depend on HELIOS in production, ask for it.
+HELIOS is maintained by a single steward (Synaptic Four). To reduce dependence on any one person, the build is documented from a clean machine in this file, the release steps are written down, and the source can be inspected and built without access to Synaptic Four systems (clean-room check dated 2026-10; Python ≥ 3.11 and network access to PyPI for a first install). Operational details such as accounts, publication rights and escrow arrangements are being documented in a non-public continuity plan.
 
 ## Minimal operator runbook
 
