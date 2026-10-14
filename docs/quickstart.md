@@ -5,7 +5,7 @@
 HELIOS is **alpha**. Install from PyPI (see [RELEASING.md](../RELEASING.md)):
 
 ```bash
-pip install helios-audit
+pip install helios-audit==0.1.2
 ```
 
 From a clone:

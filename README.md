@@ -13,7 +13,7 @@ These public repositories are maintained by the same organisation and are design
 
 ## Quick start
 
-The package name is `helios-audit`. **PyPI has `0.1.1`** (git tag `v0.1.1`). Later commits on `main` may be ahead of that tag. `pip install helios-audit==0.1.1` matches the tag, not necessarily HEAD.
+The package name is `helios-audit`. **PyPI `0.1.2`** is the version recorded in the 2026-10 registry query (git tag `v0.1.2`). Later commits on `main` may be ahead of that tag. `pip install helios-audit==0.1.2` matches the tag, not necessarily HEAD.
 
 ```bash
 pip install -e ".[dev]"
