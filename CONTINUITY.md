@@ -2,7 +2,7 @@
 
 Survivability notes. **True on `origin/main` today.** Not legal advice. Not certification.
 
-**Audited revision:** `origin/main` @ `4932aaf367691ca589348c63beb6008f18d97ca0`. Latest tag on origin: `v0.1.2` (commit `eda6417555052598650e0bafd3c230cd7b69f198`, differs from this main tip). Package version on main (`pyproject.toml`): `0.1.2`.
+Checked on 2026-10-14. Release tags: `git tag` (do not copy a tag or commit SHA into this file). This repository has no `VERSIONS.lock`. Package version: `pyproject.toml`. PyPI `helios-audit` **0.1.2** is the version recorded by the 2026-10 registry query and matches git tag `v0.1.2`. `main` can be ahead of that tag.
 
 ## What this project is
 
@@ -24,8 +24,8 @@ Genomics pipeline **audit evidence** framework: signed audit trails, checks, exp
 ```bash
 git clone https://github.com/SynapticFour/HELIOS.git
 cd HELIOS
-git checkout v0.1.1    # matches published PyPI 0.1.1
-# Or for current main (may be 0.1.2 unpublished):
+git tag -l 'v*'
+git checkout <tag>     # tag v0.1.2 matches the recorded PyPI 0.1.2; main may be ahead
 # git checkout main
 python3.11 -m venv .venv
 . .venv/bin/activate
@@ -77,8 +77,8 @@ HELIOS is maintained by a single steward (Synaptic Four). To reduce dependence o
 
 | Action | Command |
 |--------|---------|
-| Install (from tag matching PyPI) | `pip install helios-audit==0.1.1` **or** clone `v0.1.1` → venv → `make install` |
-| Install (from main) | Clone → Python 3.11 venv → `make install` (expect 0.1.2 on audited HEAD) |
+| Install (PyPI pin recorded 2026-10) | `pip install helios-audit==0.1.2` **or** clone the `v0.1.2` tag → venv → `make install` |
+| Install (from main) | Clone → Python 3.11 venv → `make install` (version is `pyproject.toml`; it can be ahead of the tag) |
 | Prove | `make prove` |
 | Start dashboard | set `HELIOS_DASHBOARD_API_KEY` → `make up` |
 | Stop | `make down` |
