@@ -23,7 +23,7 @@ Apache License 2.0 — see [LICENSE](../LICENSE).
 
 | Topic | Status |
 |-------|--------|
-| PyPI equals git HEAD | **Only at tag v0.1.1.** PyPI has `helios-audit` **0.1.1**. Later `main` commits may be ahead. Install from git for unreleased work. |
+| PyPI equals git HEAD | **At tag v0.1.2.** The 2026-10 registry query recorded PyPI `helios-audit` **0.1.2**. Later `main` commits may be ahead. Install from git for unreleased work. |
 | Live Ferrum / Solum HTTP | Not implemented. Solum writes an export file; HELIOS ingests the file. |
 | Laboratory accreditation / ISO 15189 certificate | Orientation only. Evidence you still interpret in your QMS. |
 | Combo SKU with Ferrum or Solum | Does not exist. |
