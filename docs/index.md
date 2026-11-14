@@ -5,7 +5,7 @@
 - Start with the [quickstart](quickstart.md)
 - **Operator reference** (config, env, CLI, exit codes, trust store): [operator.md](operator.md)
 - **Solum clinical ingest:** [solum-ingest.md](solum-ingest.md) (`helios solum-audit`, CLIN-ACCESS-001)
-- Review [architecture](architecture.md) and [ADRs](decisions/README.md) ([0001 fail-closed](decisions/0001-fail-closed-evidence.md), [0002 trust store](decisions/0002-trust-store.md))
+- Review [architecture](ARCHITECTURE.md) and [ADRs](decisions/README.md) ([0001 fail-closed](decisions/0001-fail-closed-evidence.md), [0002 trust store](decisions/0002-trust-store.md))
 - **Threat model:** [THREAT_MODEL.md](THREAT_MODEL.md) · **Incident response:** [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)
 - Explore compliance mappings (engineering orientation, not certification):
   - [ISO 15189:2022](compliance/iso15189.md)
