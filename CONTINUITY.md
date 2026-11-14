@@ -6,7 +6,7 @@ Checked on 2026-10-14. Release tags: `git tag` (do not copy a tag or commit SHA 
 
 ## What this project is
 
-Genomics pipeline **audit evidence** framework: signed audit trails, checks, exports (JSON / PDF / RO-Crate per product docs). Reads export JSON from disk; does **not** call Ferrum/Helix APIs or orchestrate them. License: **Apache-2.0**. Maturity: Early access / Alpha. Console script: `helios`. Import package: `helios`.
+Genomics pipeline **audit evidence** framework: signed audit trails, checks, exports (JSON / PDF / RO-Crate per product docs). Reads export JSON from disk; does **not** call Ferrum/Helix APIs or orchestrate them. License: **Apache-2.0**. Maturity on this branch: **Early use** (registry HELIOS-MATURITY-001). The claim's plain text still says early access. Until this branch is merged, `origin/main` still says Early access / Alpha. Console script: `helios`. Import package: `helios`.
 
 ## Build from a clean machine (from a given tag)
 
