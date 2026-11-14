@@ -3,7 +3,7 @@
 **Status:** Living · Alpha product
 **Version:** 1.0 · 2026-08-12
 **Audience:** Security reviewers, lab quality / IT
-**Related:** [README.md](../README.md) · [architecture.md](ARCHITECTURE.md) · [operator.md](operator.md) · [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)
+**Related:** [README.md](../README.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [operator.md](operator.md) · [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)
 
 HELIOS produces **technical audit evidence** for genomics pipelines. It is **not** certification, accreditation, legal determination, or regulatory approval.
 

@@ -1,6 +1,6 @@
 # Operator reference
 
-How to run HELIOS so the output is actually evidence: fail-closed checks, a trust store, and non-zero exits on failure. Architecture: [architecture.md](ARCHITECTURE.md). Decisions: [0001](decisions/0001-fail-closed-evidence.md), [0002](decisions/0002-trust-store.md), [0003](decisions/0003-static-signed-report.md).
+How to run HELIOS so the output is actually evidence: fail-closed checks, a trust store, and non-zero exits on failure. Architecture: [ARCHITECTURE.md](ARCHITECTURE.md). Decisions: [0001](decisions/0001-fail-closed-evidence.md), [0002](decisions/0002-trust-store.md), [0003](decisions/0003-static-signed-report.md).
 
 HELIOS is **not** a certification.
 
