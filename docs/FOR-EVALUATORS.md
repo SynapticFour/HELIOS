@@ -4,7 +4,7 @@ Factual snapshot of this repository. Not a sales brief. Not legal advice. Not a 
 
 ## Maturity
 
-**Early access.** Apache-2.0. Alpha→Beta notes: [ALPHA-TO-BETA.md](ALPHA-TO-BETA.md).
+**Early use.** Registry: HELIOS-MATURITY-001. The claim's plain text says early access. The public label for that stage is Early use. The checklist in [ALPHA-TO-BETA.md](ALPHA-TO-BETA.md) is not a second status. Apache-2.0.
 
 HELIOS **reads export JSON from disk**. It does **not** call Ferrum or Solum APIs and does **not** orchestrate those products.
 
