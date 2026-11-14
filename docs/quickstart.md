@@ -2,7 +2,7 @@
 
 ## 1) Install
 
-HELIOS is **alpha**. Install from PyPI (see [RELEASING.md](../RELEASING.md)):
+The public status is Early use. Registry: HELIOS-MATURITY-001. Install from PyPI (see [RELEASING.md](../RELEASING.md)):
 
 ```bash
 pip install helios-audit==0.1.2
